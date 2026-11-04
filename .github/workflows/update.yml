@@ -7,10 +7,14 @@ on:
     - cron: "30 7 * * 1-5"
   workflow_dispatch:
     inputs:
-      force:
-        description: "非交易日也寫入（手動補資料）"
-        type: boolean
-        default: false
+      backfill:
+        description: "回補最近 N 個日曆日（0＝只抓今天）"
+        type: string
+        default: "0"
+      date:
+        description: "指定日期 YYYY-MM-DD（留空＝今天）"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -29,7 +33,7 @@ jobs:
           python-version: "3.11"
       - run: pip install requests
       - name: 抓取收盤資料
-        run: python scripts/fetch.py ${{ inputs.force && '--force' || '' }}
+        run: python scripts/fetch.py --backfill "${{ inputs.backfill || '0' }}" ${{ inputs.date && format('--date {0}', inputs.date) || '' }}
       - name: 提交資料
         run: |
           git config user.name "github-actions[bot]"
@@ -37,4 +41,5 @@ jobs:
           git add data/history.json
           git diff --cached --quiet && echo "無新資料" && exit 0
           git commit -m "data: $(TZ=Asia/Taipei date +%F) 收盤資料"
+          git pull --rebase -q origin main
           git push

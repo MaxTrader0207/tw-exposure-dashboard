@@ -29,6 +29,10 @@
     $('meta').textContent = '資料載入失敗：' + e.message;
     return;
   }
+  if (!history.length) {
+    $('meta').textContent = '尚無資料：等待 GitHub Actions 第一次收盤抓取。';
+    return;
+  }
   const ins = cfg.instruments;
   const byId = Object.fromEntries(ins.map((i) => [i.id, i]));
   const name = (id) => byId[id]?.name || id;
