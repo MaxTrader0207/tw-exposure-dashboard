@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台股水位儀表板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main class="wrap">
+  <header class="head">
+    <div>
+      <h1>台股水位儀表板</h1>
+      <p class="muted" id="meta">載入中…</p>
+    </div>
+    <p class="muted legend">紅＝上漲／加分　綠＝下跌／扣分</p>
+  </header>
+  <p class="warn" id="warn" hidden></p>
+
+  <section class="tiles" id="tiles"></section>
+  <p class="tier" id="tier"></p>
+
+  <section class="grid">
+    <article class="card">
+      <h2>因子分數貢獻</h2>
+      <p class="muted">每個因子換算成 −1 到 +1 後乘上權重，加總即綜合分數。</p>
+      <div class="chart" id="factorChart"></div>
+    </article>
+    <article class="card">
+      <h2>各商品相對大盤</h2>
+      <p class="muted">虛線為基準指數漲跌幅，落在左側代表弱於大盤。</p>
+      <div class="chart" id="relChart"></div>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2>歷史水位與指數</h2>
+    <p class="muted" id="histNote"></p>
+    <div class="chart" id="histChart"></div>
+  </section>
+
+  <section>
+    <h2 class="sec">今日盤面解讀</h2>
+    <div class="insights" id="insights"></div>
+  </section>
+
+  <section>
+    <h2 class="sec">商品之間的互動與關聯</h2>
+    <p class="muted" id="relNote"></p>
+    <div class="grid3" id="instCards"></div>
+  </section>
+
+  <section class="card">
+    <h2>日報酬相關係數</h2>
+    <p class="muted" id="corrNote"></p>
+    <div class="scroll" id="corr"></div>
+  </section>
+
+  <section class="grid">
+    <article class="card">
+      <h2>水位試算器</h2>
+      <p class="muted">預先帶入最新收盤，可改數字模擬盤中或明天的情境。</p>
+      <div class="form" id="simForm"></div>
+      <button type="button" class="btn" id="simReset">還原為最新收盤</button>
+    </article>
+    <article class="card">
+      <h2>試算結果</h2>
+      <div id="simOut"></div>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2>因子明細</h2>
+    <p class="muted" id="policyNote"></p>
+    <div class="scroll"><table id="factorTable"></table></div>
+  </section>
+
+  <section class="card">
+    <h2>最新報價</h2>
+    <div class="scroll"><table id="quoteTable"></table></div>
+  </section>
+
+  <footer class="muted">
+    商品與因子由 <code>config/instruments.json</code>、<code>config/model.json</code> 決定，修改後不需改程式；資料每個交易日收盤後由 GitHub Actions 自動更新。規則式模型，僅供部位管理參考，不構成投資建議。
+  </footer>
+</main>
+<script src="assets/engine.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

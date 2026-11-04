@@ -1,0 +1,40 @@
+name: 每日更新水位資料
+
+on:
+  schedule:
+    # 台北 14:40 與 15:30（UTC 06:40、07:30），週一到週五；第二次是資料延遲時的補抓
+    - cron: "40 6 * * 1-5"
+    - cron: "30 7 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "非交易日也寫入（手動補資料）"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - name: 抓取收盤資料
+        run: python scripts/fetch.py ${{ inputs.force && '--force' || '' }}
+      - name: 提交資料
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/history.json
+          git diff --cached --quiet && echo "無新資料" && exit 0
+          git commit -m "data: $(TZ=Asia/Taipei date +%F) 收盤資料"
+          git push

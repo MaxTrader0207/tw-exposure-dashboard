@@ -1,0 +1,23 @@
+{
+  "_說明": "水位模型。factors 的 type 可用：pct（a 的漲跌幅）、spread（a 漲跌幅 − b 漲跌幅）、basis（(a 價 − b 價) ÷ b 價 × 100）、breadth（tag 族群 (上漲檔數 − 下跌檔數) ÷ 檔數）、rel_avg（tag 族群平均漲跌幅 − b 漲跌幅）。a、b 填商品 id，tag 填 instruments.json 的標籤。分數 = clamp(dir × 原始值 ÷ scale, −1, 1) × weight；水位 = base + slope × 綜合分數，限制在 floor 到 cap。",
+  "factors": [
+    {"key": "fx", "name": "台幣匯率", "type": "pct", "a": "USDTWD", "weight": 20, "scale": 0.5, "dir": -1, "desc": "台匯漲跌幅；台幣貶值扣分"},
+    {"key": "fxdiv", "name": "台幣相對美元", "type": "spread", "a": "USDTWD", "b": "DXY", "weight": 15, "scale": 1, "dir": -1, "desc": "台匯% − 美元指數%；美元弱台幣卻貶，代表台灣特有資金外流"},
+    {"key": "trend", "name": "大盤動能", "type": "pct", "a": "TAIEX", "weight": 15, "scale": 2, "dir": 1, "desc": "加權指數漲跌幅"},
+    {"key": "basis", "name": "期現價差", "type": "basis", "a": "TXF", "b": "TAIEX", "weight": 10, "scale": 0.3, "dir": 1, "desc": "(台指期 − 加權指) ÷ 加權指；正價差代表期貨不比現貨悲觀"},
+    {"key": "anchor", "name": "台積電", "type": "pct", "a": "2330", "weight": 15, "scale": 3, "dir": 1, "desc": "最大權值股漲跌幅"},
+    {"key": "breadth", "name": "AI 族群廣度", "type": "breadth", "tag": "ai_chain", "weight": 10, "scale": 1, "dir": 1, "desc": "族群內 (上漲檔數 − 下跌檔數) ÷ 檔數"},
+    {"key": "chain", "name": "AI 族群相對強弱", "type": "rel_avg", "tag": "ai_chain", "b": "TAIEX", "weight": 15, "scale": 3, "dir": 1, "desc": "族群平均漲跌 − 加權指漲跌"}
+  ],
+  "policy": {
+    "base": 60, "slope": 0.4, "floor": 10, "cap": 90,
+    "tiers": [
+      {"min": 80, "label": "積極加碼", "advice": "匯率、權值、族群同步偏多，可滿水位操作並以台指期多單放大曝險。"},
+      {"min": 60, "label": "偏多持有", "advice": "主要因子偏多，維持多數部位，拉回權值股可承接。"},
+      {"min": 40, "label": "中性偏保守", "advice": "維持核心部位、暫停追高；高 β 族群先減碼，等扣分最多的因子轉正再加碼。"},
+      {"min": 20, "label": "保守", "advice": "多數因子偏空，持股降至少數核心，可用小台空單或賣權避險。"},
+      {"min": -1e9, "label": "防守", "advice": "資金面與權值重挫共振，以現金與避險部位為主。"}
+    ]
+  },
+  "correlationWindow": 20
+}
