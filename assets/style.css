@@ -54,3 +54,6 @@ td.w{white-space:normal;min-width:220px}
 .track i{position:absolute;top:0;bottom:0;border-radius:4px}
 .track s{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--ref)}
 footer{line-height:1.7}
+.disclaimer{border:1px solid var(--line);border-left:3px solid var(--up);border-radius:10px;padding:16px 18px;background:var(--panel);font-size:13px;color:var(--muted)}
+.disclaimer h2{color:var(--fg);margin-bottom:8px}
+.disclaimer ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px;line-height:1.7}
