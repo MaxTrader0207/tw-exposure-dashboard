@@ -54,8 +54,24 @@
     });
     const p = model.policy;
     const score = round(factors.reduce((s, f) => s + f.contrib, 0), 1);
-    const exposure = Math.round(clamp(p.base + p.slope * score, p.floor, p.cap));
-    return {factors, score, exposure, tier: tierFor(exposure, p)};
+    const ma = maAdjust(quotes, model);
+    const maPts = ma.reduce((s, r) => s + r.pts, 0);
+    const exposure = Math.round(clamp(p.base + p.slope * score + maPts, p.floor, p.cap));
+    return {factors, score, ma, maPts, exposure, tier: tierFor(exposure, p)};
+  }
+
+  // 均線規則：收盤 ≥ 均線加 above 個百分點，低於均線減 below 個百分點，每條均線分開計算。
+  // 均線數值由抓取程式寫在報價的 ma30、ma60… 欄位。
+  function maAdjust(quotes, model) {
+    const m = model.maRules;
+    if (!m) return [];
+    const last = num(quotes[m.a]?.last);
+    return m.rules.map((r) => {
+      const ma = num(quotes[m.a]?.['ma' + r.n]);
+      if (last == null || ma == null) return {n: r.n, ma: null, gap: null, above: null, pts: 0, missing: true};
+      const above = last >= ma;
+      return {n: r.n, ma, gap: round((last / ma - 1) * 100, 2), above, pts: above ? Number(r.above) : -Number(r.below)};
+    });
   }
 
   function pearson(xs, ys) {

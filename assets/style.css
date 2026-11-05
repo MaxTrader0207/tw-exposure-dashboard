@@ -57,3 +57,5 @@ footer{line-height:1.7}
 .disclaimer{border:1px solid var(--line);border-left:3px solid var(--up);border-radius:10px;padding:16px 18px;background:var(--panel);font-size:13px;color:var(--muted)}
 .disclaimer h2{color:var(--fg);margin-bottom:8px}
 .disclaimer ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px;line-height:1.7}
+.ma-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.ma-grid .tile{background:var(--bg)}

@@ -247,6 +247,15 @@ def twse_margin_ratio(_symbol, d):
     return {"last": round(value / amount * 100, 2), "chg": None, "pct": None}
 
 
+def add_moving_averages(ins, d, q):
+    """以 Yahoo 歷史收盤（d 之前）加上當天官方收盤計算均線，寫入 q["ma30"] 等欄位。"""
+    bars, _, _ = yahoo_daily(ins["historySymbol"], "2y")
+    closes = [c for bd, c in bars if bd < d] + [q["last"]]
+    for n in ins["ma"]:
+        if len(closes) >= n:
+            q[f"ma{n}"] = round(sum(closes[-n:]) / n, 2)
+
+
 ADAPTERS = {
     "twse_stock": twse_stock,
     "tpex_stock": tpex_stock,
@@ -272,6 +281,11 @@ def fetch_day(cfg, d):
         except Exception as e:  # 單一商品失敗不影響其他商品
             print(f"    {ins['id']} 錯誤：{e}")
             q = None
+        if q and ins.get("ma"):
+            try:
+                add_moving_averages(ins, d, q)
+            except Exception as e:
+                print(f"    {ins['id']} 均線計算失敗：{e}")
         if q:
             quotes[ins["id"]] = q
             print(f"  {ins['id']:<8} {q['last']:>12} {'' if q['pct'] is None else format(q['pct'], '+.2f') + '%'}")

@@ -56,6 +56,7 @@
   $('tiles').append(
     tile('建議持股水位', today.exposure + '%', yday ? `較前一日 ${delta > 0 ? '+' : ''}${delta} 個百分點` : '佔可投資資金比例', '', true),
     tile('綜合分數', sgn(today.score, 1), '負值偏空、正值偏多', cls(today.score)),
+    ...(today.ma.length ? [tile('均線調整', sgn(today.maPts, 0) + ' 點', `站上 ${today.ma.filter((r) => r.above).length}／${today.ma.length} 條均線`, cls(today.maPts))] : []),
     tile(name(bench), pct(q[bench]?.pct), fmtNum(q[bench]?.last), cls(q[bench]?.pct))
   );
   const sorted = [...today.factors].filter((f) => !f.missing).sort((a, b) => a.contrib - b.contrib);
@@ -113,11 +114,14 @@
   }
 
   /* ---------- 歷史 ---------- */
-  const series = history.map((d) => ({date: d.date, exposure: Engine.computeDay(d.quotes, model, ins).exposure, idx: d.quotes[bench]?.last}));
+  const maNs = (model.maRules?.rules || []).map((r) => r.n);
+  const maColors = ['#f59e0b', '#a78bfa', '#38bdf8'];
+  const series = history.map((d) => ({date: d.date, exposure: Engine.computeDay(d.quotes, model, ins).exposure, idx: d.quotes[bench]?.last,
+    ma: Object.fromEntries(maNs.map((n) => [n, d.quotes[bench]?.['ma' + n] ?? null]))}));
   function drawHist() {
     const box = $('histChart');
     box.replaceChildren();
-    $('histNote').textContent = series.length < 2 ? '目前只有一天資料，每個交易日收盤後會自動累積。' : `近 ${series.length} 個交易日：長條為建議水位（左軸），線為${name(bench)}（右軸）。`;
+    $('histNote').textContent = series.length < 2 ? '目前只有一天資料，每個交易日收盤後會自動累積。' : `近 ${series.length} 個交易日：長條為建議水位（左軸），實線為${name(bench)}（右軸），虛線為 ${maNs.map((n, k) => `${n}MA（${['橘', '紫', '藍'][k % 3]}）`).join('、')}。`;
     const W = Math.max(300, box.clientWidth || 600), H = 240, L = 40, R = 64, T = 12, B = 28;
     const svg = sv('svg', {viewBox: `0 0 ${W} ${H}`});
     box.append(svg);
@@ -135,15 +139,36 @@
     });
     const idx = series.filter((d) => d.idx != null);
     if (idx.length) {
-      const lo = Math.min(...idx.map((d) => d.idx)), hi = Math.max(...idx.map((d) => d.idx)), pad = (hi - lo) * 0.1 || hi * 0.01;
+      const vals = idx.flatMap((d) => [d.idx, ...maNs.map((n) => d.ma[n]).filter((v) => v != null)]);
+      const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.1 || hi * 0.01;
       const y2 = (v) => T + (1 - (v - lo + pad) / (hi - lo + 2 * pad)) * (H - T - B);
       const pts = series.map((d, i) => (d.idx == null ? null : [L + i * bw + bw / 2, y2(d.idx)])).filter(Boolean);
+      maNs.forEach((n, k) => {
+        const mp = series.map((d, i) => (d.ma[n] == null ? null : `${L + i * bw + bw / 2},${y2(d.ma[n])}`)).filter(Boolean);
+        if (mp.length > 1) svg.append(sv('polyline', {points: mp.join(' '), fill: 'none', stroke: maColors[k % 3], 'stroke-width': 1.5, 'stroke-dasharray': '5 3'}));
+      });
       if (pts.length > 1) svg.append(sv('polyline', {points: pts.map((p) => p.join(',')).join(' '), fill: 'none', stroke: 'var(--fg)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}));
       pts.forEach((p) => svg.append(sv('circle', {cx: p[0], cy: p[1], r: 3, fill: 'var(--fg)'})));
       [lo, hi].forEach((v) => svg.append(sv('text', {x: W - R + 6, y: y2(v), dy: '0.35em', fill: 'var(--muted)'}, Math.round(v).toLocaleString())));
     }
     const step = Math.ceil(n / Math.max(1, Math.floor((W - L - R) / 70)));
     series.forEach((d, i) => { if (i % step === 0 || i === n - 1) svg.append(sv('text', {x: L + i * bw + bw / 2, y: H - 8, 'text-anchor': 'middle', fill: 'var(--muted)'}, d.date.slice(5))); });
+  }
+
+  /* ---------- 均線位置 ---------- */
+  function drawMA() {
+    const box = $('maCards');
+    if (!today.ma.length) { box.closest('section').hidden = true; return; }
+    const rules = model.maRules.rules;
+    $('maNote').textContent = `${name(bench)}收盤 ${fmtNum(q[bench]?.last)}。每條均線分開計算：收盤站上（≥）均線水位加分，跌破則減分，直接加在水位上。`;
+    today.ma.forEach((r, k) => {
+      const rule = rules[k];
+      box.append(el('div', {class: 'tile'},
+        el('span', {class: 'muted'}, `${r.n} 日均線`),
+        el('span', {class: 'v'}, r.ma == null ? '—' : fmtNum(r.ma)),
+        el('span', {class: cls(r.gap)}, r.missing ? '歷史不足，暫不計算' : `${r.above ? '站上' : '跌破'}，乖離 ${pct(r.gap)}`),
+        el('span', {class: 'muted'}, `水位 `, el('b', {class: cls(r.pts)}, sgn(r.pts, 0) + ' 點'), `（站上 +${rule.above}／跌破 −${rule.below}）`)));
+    });
   }
 
   /* ---------- 今日解讀（依因子類型自動產生） ---------- */
@@ -184,6 +209,12 @@
     const neg = sorted.filter((f) => f.contrib < 0), pos = sorted.filter((f) => f.contrib > 0).reverse();
     box.append(el('div', {class: 'insight'}, el('b', {}, '總結：'),
       `${neg.length ? '扣分主要來自' + neg.slice(0, 3).map((f) => f.name).join('、') : '沒有明顯扣分因子'}；${pos.length ? '緩衝來自' + pos.slice(0, 2).map((f) => f.name).join('、') : '沒有因子加分'}。${yday ? `水位較前一日 ${delta >= 0 ? '上調' : '下調'} ${Math.abs(delta)} 個百分點。` : ''}`));
+    if (today.ma.length) {
+      const up = today.ma.filter((r) => r.above), dn = today.ma.filter((r) => r.above === false);
+      box.append(el('div', {class: 'insight ' + (today.maPts < 0 ? 'neg' : today.maPts > 0 ? 'pos' : '')},
+        el('b', {}, `均線位置（水位 ${sgn(today.maPts, 0)} 點）：`),
+        `${up.length ? '站上 ' + up.map((r) => r.n + 'MA').join('、') : ''}${up.length && dn.length ? '；' : ''}${dn.length ? '跌破 ' + dn.map((r) => `${r.n}MA（${pct(r.gap)}）`).join('、') : ''}。${up.length === today.ma.length ? '多頭排列，趨勢支撐完整。' : dn.length === today.ma.length ? '三條均線全數跌破，中長期趨勢轉弱。' : '均線之間，趨勢分歧。'}`));
+    }
     today.factors.forEach((f) => {
       const d = defs[f.key];
       const text = f.missing ? '資料不足，今日以 0 分計。' : (NARRATE[d.type] ? NARRATE[d.type](f, d) : '');
@@ -258,6 +289,8 @@
   function runSim() {
     const sq = {};
     inputs.forEach((i) => { if (i.value === '') return; (sq[i.dataset.id] ||= {})[i.dataset.col] = Number(i.value); });
+    // 均線是過去的收盤平均，試算時沿用最新數值，只拿輸入的指數點位去比較
+    if (model.maRules && sq[model.maRules.a]) maNs.forEach((n) => { sq[model.maRules.a]['ma' + n] = q[model.maRules.a]?.['ma' + n]; });
     const r = Engine.computeDay(sq, model, ins);
     const out = $('simOut');
     out.replaceChildren(
@@ -274,13 +307,20 @@
       bar.style.background = f.contrib >= 0 ? 'var(--up)' : 'var(--down)';
       bars.append(el('div', {class: 'brow'}, el('span', {}, f.name), el('span', {class: 'track'}, bar, el('s')), el('span', {class: 'num ' + cls(f.contrib)}, f.missing ? '—' : sgn(f.contrib, 1))));
     });
-    out.append(bars);
+    r.ma.forEach((a) => {
+      const w = Math.abs(a.pts) / m * 50;
+      const bar = el('i');
+      bar.style.left = (a.pts >= 0 ? 50 : 50 - w) + '%'; bar.style.width = w + '%';
+      bar.style.background = a.pts >= 0 ? 'var(--up)' : 'var(--down)';
+      bars.append(el('div', {class: 'brow'}, el('span', {}, `${a.n}MA ${a.missing ? '' : a.above ? '站上' : '跌破'}`), el('span', {class: 'track'}, bar, el('s')), el('span', {class: 'num ' + cls(a.pts)}, a.missing ? '—' : sgn(a.pts, 0) + '點')));
+    });
+    out.append(bars, el('p', {class: 'muted'}, `${model.policy.base}% + ${model.policy.slope} × ${sgn(r.score, 1)}${r.ma.length ? ` ${r.maPts >= 0 ? '+' : '−'} ${Math.abs(r.maPts)}（均線）` : ''} = ${r.exposure}%（限制在 ${model.policy.floor}%～${model.policy.cap}%）`));
   }
 
   /* ---------- 表格 ---------- */
   function drawTables() {
     const p = model.policy;
-    $('policyNote').textContent = `建議水位 = ${p.base}% + ${p.slope} × 綜合分數，限制在 ${p.floor}%–${p.cap}%。分數 = clamp(方向 × 原始值 ÷ 門檻, −1, 1) × 權重。`;
+    $('policyNote').textContent = `建議水位 = ${p.base}% + ${p.slope} × 綜合分數${model.maRules ? ' + 均線調整（' + model.maRules.rules.map((r) => `${r.n}MA 站上 +${r.above}／跌破 −${r.below}`).join('、') + '）' : ''}，限制在 ${p.floor}%–${p.cap}%。分數 = clamp(方向 × 原始值 ÷ 門檻, −1, 1) × 權重。`;
     const defs = Object.fromEntries(model.factors.map((d) => [d.key, d]));
     const ft = $('factorTable');
     ft.append(el('tr', {}, ...['因子', '類型', '權重', '門檻', '原始值', '分數', '貢獻', '定義'].map((h, i) => el('th', {class: i >= 2 && i <= 6 ? 'n' : ''}, h))));
@@ -298,6 +338,6 @@
   }
 
   const redraw = () => { drawFactor(); drawRel(); drawHist(); };
-  redraw(); drawInsights(); drawCards(); drawCorr(); fill(); runSim(); drawTables();
+  redraw(); drawMA(); drawInsights(); drawCards(); drawCorr(); fill(); runSim(); drawTables();
   let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(redraw, 150); });
 })();
