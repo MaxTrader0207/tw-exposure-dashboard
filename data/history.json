@@ -2,7 +2,7 @@
  {
   "date": "2026-09-16",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:51:02+08:00",
+  "fetchedAt": "2026-11-05T15:01:17+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -49,16 +49,17 @@
     "pct": 0.71
    },
    "MARGIN": {
-    "last": 183.92,
+    "last": 180.19,
     "chg": null,
-    "pct": null
+    "pct": null,
+    "asOf": "2026-09-15"
    }
   }
  },
  {
   "date": "2026-09-17",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:51:17+08:00",
+  "fetchedAt": "2026-11-05T15:01:38+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -105,16 +106,17 @@
     "pct": 0.2
    },
    "MARGIN": {
-    "last": 183.94,
-    "chg": 0.02,
-    "pct": 0.01
+    "last": 183.92,
+    "chg": 3.73,
+    "pct": 2.07,
+    "asOf": "2026-09-16"
    }
   }
  },
  {
   "date": "2026-09-18",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:51:32+08:00",
+  "fetchedAt": "2026-11-05T15:01:55+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -161,16 +163,17 @@
     "pct": -1.18
    },
    "MARGIN": {
-    "last": 189.8,
-    "chg": 5.86,
-    "pct": 3.19
+    "last": 183.94,
+    "chg": 0.02,
+    "pct": 0.01,
+    "asOf": "2026-09-17"
    }
   }
  },
  {
   "date": "2026-09-21",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:51:47+08:00",
+  "fetchedAt": "2026-11-05T15:02:08+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -217,16 +220,17 @@
     "pct": 1.03
    },
    "MARGIN": {
-    "last": 191.44,
-    "chg": 1.64,
-    "pct": 0.86
+    "last": 189.8,
+    "chg": 5.86,
+    "pct": 3.19,
+    "asOf": "2026-09-18"
    }
   }
  },
  {
   "date": "2026-09-22",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:52:03+08:00",
+  "fetchedAt": "2026-11-05T15:02:23+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -273,16 +277,17 @@
     "pct": -0.7
    },
    "MARGIN": {
-    "last": 193.12,
-    "chg": 1.68,
-    "pct": 0.88
+    "last": 191.44,
+    "chg": 1.64,
+    "pct": 0.86,
+    "asOf": "2026-09-21"
    }
   }
  },
  {
   "date": "2026-09-23",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:52:17+08:00",
+  "fetchedAt": "2026-11-05T15:02:37+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -329,16 +334,17 @@
     "pct": 0.1
    },
    "MARGIN": {
-    "last": 193.44,
-    "chg": 0.32,
-    "pct": 0.17
+    "last": 193.12,
+    "chg": 1.68,
+    "pct": 0.88,
+    "asOf": "2026-09-22"
    }
   }
  },
  {
   "date": "2026-09-24",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:52:32+08:00",
+  "fetchedAt": "2026-11-05T15:02:53+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -385,16 +391,17 @@
     "pct": 2.94
    },
    "MARGIN": {
-    "last": 193.87,
-    "chg": 0.43,
-    "pct": 0.22
+    "last": 193.44,
+    "chg": 0.32,
+    "pct": 0.17,
+    "asOf": "2026-09-23"
    }
   }
  },
  {
   "date": "2026-09-29",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:53:15+08:00",
+  "fetchedAt": "2026-11-05T15:03:38+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -441,16 +448,17 @@
     "pct": 1.08
    },
    "MARGIN": {
-    "last": 191.81,
-    "chg": -2.06,
-    "pct": -1.06
+    "last": 193.87,
+    "chg": 0.43,
+    "pct": 0.22,
+    "asOf": "2026-09-24"
    }
   }
  },
  {
   "date": "2026-09-30",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:53:29+08:00",
+  "fetchedAt": "2026-11-05T15:03:54+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -497,16 +505,17 @@
     "pct": 0.29
    },
    "MARGIN": {
-    "last": 193.66,
-    "chg": 1.85,
-    "pct": 0.96
+    "last": 191.81,
+    "chg": -2.06,
+    "pct": -1.06,
+    "asOf": "2026-09-29"
    }
   }
  },
  {
   "date": "2026-10-01",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:53:43+08:00",
+  "fetchedAt": "2026-11-05T15:04:11+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -553,16 +562,17 @@
     "pct": 0.72
    },
    "MARGIN": {
-    "last": 195.08,
-    "chg": 1.42,
-    "pct": 0.73
+    "last": 193.66,
+    "chg": 1.85,
+    "pct": 0.96,
+    "asOf": "2026-09-30"
    }
   }
  },
  {
   "date": "2026-10-02",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:53:58+08:00",
+  "fetchedAt": "2026-11-05T15:04:24+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -609,16 +619,17 @@
     "pct": -1.06
    },
    "MARGIN": {
-    "last": 197.01,
-    "chg": 1.93,
-    "pct": 0.99
+    "last": 195.08,
+    "chg": 1.42,
+    "pct": 0.73,
+    "asOf": "2026-10-01"
    }
   }
  },
  {
   "date": "2026-10-05",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:54:12+08:00",
+  "fetchedAt": "2026-11-05T15:04:39+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -665,16 +676,17 @@
     "pct": 0.76
    },
    "MARGIN": {
-    "last": 200.67,
-    "chg": 3.66,
-    "pct": 1.86
+    "last": 197.01,
+    "chg": 1.93,
+    "pct": 0.99,
+    "asOf": "2026-10-02"
    }
   }
  },
  {
   "date": "2026-10-06",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:54:27+08:00",
+  "fetchedAt": "2026-11-05T15:04:53+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -721,16 +733,17 @@
     "pct": 0.64
    },
    "MARGIN": {
-    "last": 199.12,
-    "chg": -1.55,
-    "pct": -0.77
+    "last": 200.67,
+    "chg": 3.66,
+    "pct": 1.86,
+    "asOf": "2026-10-05"
    }
   }
  },
  {
   "date": "2026-10-07",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:54:41+08:00",
+  "fetchedAt": "2026-11-05T15:05:07+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -777,16 +790,17 @@
     "pct": -0.79
    },
    "MARGIN": {
-    "last": 198.91,
-    "chg": -0.21,
-    "pct": -0.11
+    "last": 199.12,
+    "chg": -1.55,
+    "pct": -0.77,
+    "asOf": "2026-10-06"
    }
   }
  },
  {
   "date": "2026-10-08",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:54:55+08:00",
+  "fetchedAt": "2026-11-05T15:05:20+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -833,16 +847,17 @@
     "pct": 0.15
    },
    "MARGIN": {
-    "last": 197.06,
-    "chg": -1.85,
-    "pct": -0.93
+    "last": 198.91,
+    "chg": -0.21,
+    "pct": -0.11,
+    "asOf": "2026-10-07"
    }
   }
  },
  {
   "date": "2026-10-12",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:55:28+08:00",
+  "fetchedAt": "2026-11-05T15:05:53+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -889,16 +904,17 @@
     "pct": 0.25
    },
    "MARGIN": {
-    "last": 196.16,
-    "chg": -0.9,
-    "pct": -0.46
+    "last": 197.06,
+    "chg": -1.85,
+    "pct": -0.93,
+    "asOf": "2026-10-08"
    }
   }
  },
  {
   "date": "2026-10-13",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:55:44+08:00",
+  "fetchedAt": "2026-11-05T15:06:08+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -945,16 +961,17 @@
     "pct": -0.08
    },
    "MARGIN": {
-    "last": 189.94,
-    "chg": -6.22,
-    "pct": -3.17
+    "last": 196.16,
+    "chg": -0.9,
+    "pct": -0.46,
+    "asOf": "2026-10-12"
    }
   }
  },
  {
   "date": "2026-10-14",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:55:58+08:00",
+  "fetchedAt": "2026-11-05T15:06:23+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1001,16 +1018,17 @@
     "pct": -0.44
    },
    "MARGIN": {
-    "last": 191.61,
-    "chg": 1.67,
-    "pct": 0.88
+    "last": 189.94,
+    "chg": -6.22,
+    "pct": -3.17,
+    "asOf": "2026-10-13"
    }
   }
  },
  {
   "date": "2026-10-15",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:56:13+08:00",
+  "fetchedAt": "2026-11-05T15:06:38+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1057,16 +1075,17 @@
     "pct": -0.52
    },
    "MARGIN": {
-    "last": 181.8,
-    "chg": -9.81,
-    "pct": -5.12
+    "last": 191.61,
+    "chg": 1.67,
+    "pct": 0.88,
+    "asOf": "2026-10-14"
    }
   }
  },
  {
   "date": "2026-10-16",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:56:27+08:00",
+  "fetchedAt": "2026-11-05T15:06:51+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1113,16 +1132,17 @@
     "pct": -1.95
    },
    "MARGIN": {
-    "last": 183.39,
-    "chg": 1.59,
-    "pct": 0.87
+    "last": 181.8,
+    "chg": -9.81,
+    "pct": -5.12,
+    "asOf": "2026-10-15"
    }
   }
  },
  {
   "date": "2026-10-19",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:56:41+08:00",
+  "fetchedAt": "2026-11-05T15:07:06+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1169,16 +1189,17 @@
     "pct": 0.18
    },
    "MARGIN": {
-    "last": 181.3,
-    "chg": -2.09,
-    "pct": -1.14
+    "last": 183.39,
+    "chg": 1.59,
+    "pct": 0.87,
+    "asOf": "2026-10-16"
    }
   }
  },
  {
   "date": "2026-10-20",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:56:55+08:00",
+  "fetchedAt": "2026-11-05T15:07:20+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1225,16 +1246,17 @@
     "pct": 0.75
    },
    "MARGIN": {
-    "last": 178.93,
-    "chg": -2.37,
-    "pct": -1.31
+    "last": 181.3,
+    "chg": -2.09,
+    "pct": -1.14,
+    "asOf": "2026-10-19"
    }
   }
  },
  {
   "date": "2026-10-21",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:57:10+08:00",
+  "fetchedAt": "2026-11-05T15:07:34+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1281,16 +1303,17 @@
     "pct": -0.37
    },
    "MARGIN": {
-    "last": 182.85,
-    "chg": 3.92,
-    "pct": 2.19
+    "last": 178.93,
+    "chg": -2.37,
+    "pct": -1.31,
+    "asOf": "2026-10-20"
    }
   }
  },
  {
   "date": "2026-10-22",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:57:24+08:00",
+  "fetchedAt": "2026-11-05T15:07:47+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1337,16 +1360,17 @@
     "pct": 0.57
    },
    "MARGIN": {
-    "last": 176.99,
-    "chg": -5.86,
-    "pct": -3.2
+    "last": 182.85,
+    "chg": 3.92,
+    "pct": 2.19,
+    "asOf": "2026-10-21"
    }
   }
  },
  {
   "date": "2026-10-27",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:58:04+08:00",
+  "fetchedAt": "2026-11-05T15:08:27+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1393,16 +1417,17 @@
     "pct": -0.04
    },
    "MARGIN": {
-    "last": 176.09,
-    "chg": -0.9,
-    "pct": -0.51
+    "last": 176.99,
+    "chg": -5.86,
+    "pct": -3.2,
+    "asOf": "2026-10-22"
    }
   }
  },
  {
   "date": "2026-10-28",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:58:18+08:00",
+  "fetchedAt": "2026-11-05T15:08:40+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1449,16 +1474,17 @@
     "pct": 0.14
    },
    "MARGIN": {
-    "last": 183.26,
-    "chg": 7.17,
-    "pct": 4.07
+    "last": 176.09,
+    "chg": -0.9,
+    "pct": -0.51,
+    "asOf": "2026-10-27"
    }
   }
  },
  {
   "date": "2026-10-29",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:58:33+08:00",
+  "fetchedAt": "2026-11-05T15:08:53+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1505,16 +1531,17 @@
     "pct": 1.04
    },
    "MARGIN": {
-    "last": 178.44,
-    "chg": -4.82,
-    "pct": -2.63
+    "last": 183.26,
+    "chg": 7.17,
+    "pct": 4.07,
+    "asOf": "2026-10-28"
    }
   }
  },
  {
   "date": "2026-10-30",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:58:47+08:00",
+  "fetchedAt": "2026-11-05T15:09:06+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1561,16 +1588,17 @@
     "pct": -1.11
    },
    "MARGIN": {
-    "last": 171.75,
-    "chg": -6.69,
-    "pct": -3.75
+    "last": 178.44,
+    "chg": -4.82,
+    "pct": -2.63,
+    "asOf": "2026-10-29"
    }
   }
  },
  {
   "date": "2026-11-02",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:59:01+08:00",
+  "fetchedAt": "2026-11-05T15:09:19+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1617,16 +1645,17 @@
     "pct": -1.2
    },
    "MARGIN": {
-    "last": 171.7,
-    "chg": -0.05,
-    "pct": -0.03
+    "last": 171.75,
+    "chg": -6.69,
+    "pct": -3.75,
+    "asOf": "2026-10-30"
    }
   }
  },
  {
   "date": "2026-11-03",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:59:15+08:00",
+  "fetchedAt": "2026-11-05T15:09:32+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1673,16 +1702,17 @@
     "pct": -0.71
    },
    "MARGIN": {
-    "last": 162.67,
-    "chg": -9.03,
-    "pct": -5.26
+    "last": 171.7,
+    "chg": -0.05,
+    "pct": -0.03,
+    "asOf": "2026-11-02"
    }
   }
  },
  {
   "date": "2026-11-04",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:59:29+08:00",
+  "fetchedAt": "2026-11-05T15:09:45+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
@@ -1729,19 +1759,18 @@
     "pct": 1.19
    },
    "MARGIN": {
-    "last": 164.66,
-    "chg": 1.99,
-    "pct": 1.22
+    "last": 162.67,
+    "chg": -9.03,
+    "pct": -5.26,
+    "asOf": "2026-11-03"
    }
   }
  },
  {
   "date": "2026-11-05",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T14:59:42+08:00",
-  "missing": [
-   "MARGIN"
-  ],
+  "fetchedAt": "2026-11-05T15:09:57+08:00",
+  "missing": [],
   "quotes": {
    "DXY": {
     "last": 101.262,
@@ -1785,6 +1814,12 @@
     "last": 4.894,
     "chg": -0.058,
     "pct": -1.17
+   },
+   "MARGIN": {
+    "last": 164.66,
+    "chg": 1.99,
+    "pct": 1.22,
+    "asOf": "2026-11-04"
    }
   }
  }
