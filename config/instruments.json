@@ -1,9 +1,9 @@
 {
-  "_說明": "商品清單。新增、刪除、替換商品只要改這個檔案。source.type 可用：twse_stock（上市股）、tpex_stock（上櫃股）、twse_index（證交所指數，symbol 為指數中文全名）、taifex_fut（期交所期貨，symbol 為商品代號如 TX、MTX、TE）、yahoo（Yahoo Finance 代號，如 DX-Y.NYB、TWD=X、^SOX、NVDA）。tags 決定商品會被哪些因子使用（例如 ai_chain 族群）。",
+  "_說明": "商品清單。新增、刪除、替換商品只要改這個檔案。source.type 可用：twse_stock（上市股）、tpex_stock（上櫃股）、twse_index（證交所指數，symbol 為指數中文全名）、taifex_fut（期交所期貨，symbol 為商品代號如 TX、MTX、TE）、yahoo（Yahoo Finance 代號，如 DX-Y.NYB、TWD=X、^SOX、NVDA；可加 asof: \"14:00\" 表示取台北時間該時刻的小時線價格，用於 24 小時交易的匯率）。海外市場（收盤晚於台股）一律使用前一個已收盤交易日，避免用到台股收盤後才知道的資料。tags 決定商品會被哪些因子使用（例如 ai_chain 族群）。",
   "benchmark": "TAIEX",
   "instruments": [
-    {"id": "DXY", "name": "美元指數", "group": "匯率", "source": {"type": "yahoo", "symbol": "DX-Y.NYB"}, "tags": ["fx"], "role": "全球美元強弱；美元走弱時台幣通常升值"},
-    {"id": "USDTWD", "name": "台匯（美元/台幣）", "group": "匯率", "source": {"type": "yahoo", "symbol": "TWD=X"}, "tags": ["fx"], "role": "數值上升＝台幣貶值，多與外資匯出同步"},
+    {"id": "DXY", "name": "美元指數", "group": "匯率", "source": {"type": "yahoo", "symbol": "DX-Y.NYB", "asof": "14:00"}, "tags": ["fx"], "role": "全球美元強弱；美元走弱時台幣通常升值"},
+    {"id": "USDTWD", "name": "台匯（美元/台幣）", "group": "匯率", "source": {"type": "yahoo", "symbol": "TWD=X", "asof": "14:00"}, "tags": ["fx"], "role": "數值上升＝台幣貶值，多與外資匯出同步"},
     {"id": "TXF", "name": "台指期近月", "group": "期貨", "source": {"type": "taifex_fut", "symbol": "TX"}, "tags": [], "role": "台指期近月一般盤，確認或領先現貨方向"},
     {"id": "TAIEX", "name": "加權指數", "group": "大盤", "source": {"type": "twse_index", "symbol": "發行量加權股價指數"}, "tags": [], "role": "現貨大盤，水位決策的基準"},
     {"id": "2330", "name": "台積電", "group": "權值", "source": {"type": "twse_stock", "symbol": "2330"}, "tags": ["anchor"], "role": "最大權值股，外資進出首要標的"},

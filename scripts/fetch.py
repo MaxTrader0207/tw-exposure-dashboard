@@ -160,23 +160,58 @@ def taifex_fut(symbol, d):
 
 # ---------- Yahoo Finance（任意代號，也是台股備援） ----------
 
-def yahoo(symbol, d):
-    j = http("GET", f"https://query1.finance.yahoo.com/v8/finance/chart/{requests.utils.quote(symbol)}?range=3mo&interval=1d").json()
-    res = j["chart"]["result"][0]
-    off = res["meta"].get("gmtoffset", 0)
+def yahoo_chart(symbol, interval, rng):
+    j = http("GET", f"https://query1.finance.yahoo.com/v8/finance/chart/{requests.utils.quote(symbol)}?range={rng}&interval={interval}").json()
+    return j["chart"]["result"][0]
+
+
+def yahoo_daily(symbol, rng="3mo", adjusted=False):
+    """回傳 ([(交易所當地日期, 收盤價)], 是否為台北時區交易所, meta)。"""
+    res = yahoo_chart(symbol, "1d", rng)
+    meta = res["meta"]
+    off = meta.get("gmtoffset", 0)
     closes = res["indicators"]["quote"][0]["close"]
-    bars = [(datetime.fromtimestamp(t + off, timezone.utc).date(), c) for t, c in zip(res.get("timestamp", []), closes) if c is not None]
-    today = [c for bd, c in bars if bd == d]
-    before = [c for bd, c in bars if bd < d]
-    if not before:
-        return None
-    if today:
-        last = today[-1]
-    elif d == datetime.now(TW).date() and res["meta"].get("regularMarketPrice") is not None:
-        last = res["meta"]["regularMarketPrice"]  # 盤中尚未形成日線時用即時價
+    if adjusted and res["indicators"].get("adjclose"):
+        closes = res["indicators"]["adjclose"][0]["adjclose"]
+    bars = {}
+    for t, c in zip(res.get("timestamp", []), closes):
+        if c is not None:
+            bars[datetime.fromtimestamp(t + off, timezone.utc).date()] = c
+    return sorted(bars.items()), meta.get("exchangeTimezoneName") == "Asia/Taipei", meta
+
+
+def yahoo_snapshots(symbol, asof="14:00", rng="1mo"):
+    """24 小時商品（匯率）在台北時間 asof 當下的價格：取收盤時間 ≤ asof 的最後一根小時線。"""
+    hh, mm = map(int, asof.split(":"))
+    res = yahoo_chart(symbol, "60m", rng)
+    closes = res["indicators"]["quote"][0]["close"]
+    snaps = {}
+    for t, c in zip(res.get("timestamp", []), closes):
+        if c is None:
+            continue
+        end = datetime.fromtimestamp(t, TW) + timedelta(hours=1)
+        if (end.hour, end.minute) <= (hh, mm) and end.weekday() < 5:
+            snaps[end.date()] = c  # 時間遞增，同一天最後一根會覆蓋前面
+    return sorted(snaps.items())
+
+
+def yahoo(symbol, d, asof=None):
+    if asof:
+        snaps = yahoo_snapshots(symbol, asof, "1mo" if (datetime.now(TW).date() - d).days < 25 else "6mo")
+        cur = [c for sd, c in snaps if sd == d]
+        prev = [c for sd, c in snaps if sd < d]
+        return quote(cur[-1], cur[-1] - prev[-1]) if cur and prev else None
+    bars, taipei, meta = yahoo_daily(symbol, "6mo")
+    if taipei:
+        cur = [c for bd, c in bars if bd == d]
+        if not cur and d == datetime.now(TW).date() and meta.get("regularMarketPrice") is not None:
+            cur = [meta["regularMarketPrice"]]  # 尚未形成日線時用即時價
+        prev = [c for bd, c in bars if bd < d]
     else:
-        return None
-    return quote(last, last - before[-1])
+        # 海外市場：台股收盤時當天尚未開盤或收盤，只能用前一個已收盤交易日。
+        done = [c for bd, c in bars if bd < d]
+        cur, prev = done[-1:], done[:-1]
+    return quote(cur[-1], cur[-1] - prev[-1]) if cur and prev else None
 
 
 ADAPTERS = {
@@ -197,8 +232,9 @@ def fetch_day(cfg, d):
     for ins in cfg["instruments"]:
         src = ins["source"]
         fn = ADAPTERS.get(src["type"])
+        extra = {k: v for k, v in src.items() if k not in ("type", "symbol")}
         try:
-            q = fn(src["symbol"], d) if fn else None
+            q = fn(src["symbol"], d, **extra) if fn else None
         except Exception as e:  # 單一商品失敗不影響其他商品
             print(f"    {ins['id']} 錯誤：{e}")
             q = None

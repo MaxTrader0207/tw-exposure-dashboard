@@ -41,5 +41,5 @@ jobs:
           git add data/history.json
           git diff --cached --quiet && echo "無新資料" && exit 0
           git commit -m "data: $(TZ=Asia/Taipei date +%F) 收盤資料"
-          git pull --rebase -q origin main
-          git push
+          git pull --rebase -q origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"

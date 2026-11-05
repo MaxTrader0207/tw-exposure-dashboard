@@ -1,0 +1,35 @@
+name: 重新推導模型權重
+
+on:
+  schedule:
+    # 每月第一個週六台北 10:00（UTC 02:00）用最新兩年資料重估
+    - cron: "0 2 1-7 * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests numpy pandas
+      - name: 推導權重
+        run: python scripts/calibrate.py
+      - name: 提交結果
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/model.json data/calibration.json
+          git diff --cached --quiet && echo "無變更" && exit 0
+          git commit -m "model: $(TZ=Asia/Taipei date +%F) 重新推導權重"
+          git pull --rebase -q origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
