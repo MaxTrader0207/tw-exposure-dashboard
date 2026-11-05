@@ -247,6 +247,49 @@ def twse_margin_ratio(_symbol, d):
     return {"last": round(value / amount * 100, 2), "chg": None, "pct": None}
 
 
+def macromicro(chart_id, d):
+    """財經M平方圖表最新值（日期 ≤ d）。網站有 Cloudflare 機器人驗證，連不上就回傳 None，該因子影響為 0。"""
+    page = f"https://www.macromicro.me/charts/{chart_id}/"
+    hdr = {**UA, "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+           "Referer": page, "Accept": "application/json", "X-Requested-With": "XMLHttpRequest"}
+    try:
+        r = requests.get(f"https://www.macromicro.me/charts/data/{chart_id}", headers=hdr, timeout=30)
+        if r.status_code != 200 or "json" not in (r.headers.get("content-type") or ""):
+            print(f"    財經M平方無法連線（HTTP {r.status_code}），融資維持率影響設為 0")
+            return None
+        j = r.json()
+    except Exception as e:
+        print(f"    財經M平方無法連線（{e}），融資維持率影響設為 0")
+        return None
+
+    points = []
+
+    def walk(x):  # 找出所有 [時間, 數值] 序列，不依賴固定 JSON 結構
+        if isinstance(x, list) and x and all(isinstance(p, list) and len(p) == 2 for p in x):
+            points.extend(x)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+        elif isinstance(x, dict):
+            for v in x.values():
+                walk(v)
+    walk(j)
+    rows = []
+    for t, v in points:
+        try:
+            pd_ = datetime.fromtimestamp(t / 1000, TW).date() if isinstance(t, (int, float)) else datetime.strptime(str(t)[:10], "%Y-%m-%d").date()
+            rows.append((pd_, float(v)))
+        except (TypeError, ValueError):
+            continue
+    rows = sorted(r for r in rows if r[0] <= d)
+    if len(rows) < 2:
+        return None
+    (_, prev), (day, last) = rows[-2], rows[-1]
+    q = quote(last, last - prev)
+    q["asOf"] = str(day)  # 財經M平方數值的資料日期，通常晚一天更新
+    return q
+
+
 def add_moving_averages(ins, d, q):
     """以 Yahoo 歷史收盤（d 之前）加上當天官方收盤計算均線，寫入 q["ma30"] 等欄位。"""
     bars, _, _ = yahoo_daily(ins["historySymbol"], "2y")
@@ -262,6 +305,7 @@ ADAPTERS = {
     "twse_index": twse_index,
     "taifex_fut": taifex_fut,
     "twse_margin_ratio": twse_margin_ratio,
+    "macromicro": macromicro,
     "yahoo": yahoo,
 }
 

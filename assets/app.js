@@ -49,7 +49,8 @@
   const missF = today.factors.filter((f) => f.missing).map((f) => f.name);
   if (missing.length || missF.length) {
     $('warn').hidden = false;
-    $('warn').textContent = `注意：${missing.length ? '缺少報價 ' + missing.map(name).join('、') + '。' : ''}${missF.length ? '以下因子無法計算、以 0 分計：' + missF.join('、') + '。' : ''}`;
+    const mmNote = (id) => (byId[id]?.source.type === 'macromicro' ? '（財經M平方無法連線，影響設為 0）' : '');
+    $('warn').textContent = `注意：${missing.length ? '缺少報價 ' + missing.map((id) => name(id) + mmNote(id)).join('、') + '。' : ''}${missF.length ? '以下因子無法計算、以 0 分計：' + missF.join('、') + '。' : ''}`;
   }
   const delta = yday ? today.exposure - yday.exposure : null;
   const tile = (label, value, sub, c, hero) => el('div', {class: 'tile' + (hero ? ' hero' : '')}, el('span', {class: 'muted'}, label), el('span', {class: 'v ' + (c || '')}, value), el('span', {class: 'muted'}, sub));
@@ -178,7 +179,7 @@
     chg: (f, d) => `${name(d.a)} ${fmtNum(q[d.a]?.last)}，變動 ${sgn(f.raw, 1)}${d.mult === 100 ? ' bp' : ''}${(byId[d.a]?.tags || []).includes('us') ? '（前一美股交易日）' : ''}。`,
     level: (f, d) => {
       const v = q[d.a]?.last, u = byId[d.a]?.unit || '';
-      return `${name(d.a)} ${fmtNum(v)}${u}（前一日 ${q[d.a]?.chg == null ? '—' : sgn(q[d.a].chg, 2) + u}），${f.raw >= 0 ? '高於' : '低於'}中性值 ${d.center}${u} ${Math.abs(f.raw).toFixed(1)}${u}。${d.a === 'MARGIN' && v < 145 ? '已接近斷頭警戒區，留意被動賣壓。' : ''}`;
+      return `${name(d.a)} ${fmtNum(v)}${u}${q[d.a]?.asOf ? `（資料日 ${q[d.a].asOf}）` : ''}（前一日 ${q[d.a]?.chg == null ? '—' : sgn(q[d.a].chg, 2) + u}），${f.raw >= 0 ? '高於' : '低於'}中性值 ${d.center}${u} ${Math.abs(f.raw).toFixed(1)}${u}。${d.a === 'MARGIN' && v < 145 ? '已接近斷頭警戒區，留意被動賣壓。' : ''}`;
     },
     spread: (f, d) => {
       const a = q[d.a]?.pct, b = q[d.b]?.pct;
@@ -217,7 +218,7 @@
     }
     today.factors.forEach((f) => {
       const d = defs[f.key];
-      const text = f.missing ? '資料不足，今日以 0 分計。' : (NARRATE[d.type] ? NARRATE[d.type](f, d) : '');
+      const text = f.missing ? (byId[d.a]?.source.type === 'macromicro' ? '財經M平方無法連線，今日影響設為 0。' : '資料不足，今日以 0 分計。') : (NARRATE[d.type] ? NARRATE[d.type](f, d) : '');
       box.append(el('div', {class: 'insight ' + (f.contrib < 0 ? 'neg' : f.contrib > 0 ? 'pos' : '')},
         el('b', {}, `${f.name}（${sgn(f.contrib, 1)} 分）：`), text));
     });
