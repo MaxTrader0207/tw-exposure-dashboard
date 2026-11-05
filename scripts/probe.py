@@ -1,23 +1,26 @@
-"""診斷用：檢查財經M平方大盤融資維持率頁面與資料端點能否從 GitHub Actions 取得。"""
-import re
+"""診斷用：用真的 Chromium 開財經M平方頁面，看能否通過 Cloudflare 並攔到圖表資料。"""
+import json
 
-import requests
+from playwright.sync_api import sync_playwright
 
-UA = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
-    "Accept-Language": "zh-TW,zh;q=0.9",
-}
-s = requests.Session()
-page = "https://www.macromicro.me/charts/53117/taiwan-taiex-maintenance-margin"
-r = s.get(page, headers=UA, timeout=30)
-print("page", r.status_code, r.headers.get("content-type"), len(r.text), r.headers.get("server"), r.headers.get("cf-mitigated"))
-print(r.text[:500].replace("\n", " "))
-for pat in [r"data-stk=\"([^\"]+)\"", r"/charts/data/\d+", r"\"stk\"\s*:\s*\"([^\"]+)\"", r"Bearer [A-Za-z0-9]+"]:
-    print(pat, re.findall(pat, r.text)[:3])
-m = re.search(r"data-stk=\"([^\"]+)\"", r.text)
-hdr = {**UA, "Referer": page, "X-Requested-With": "XMLHttpRequest", "Accept": "application/json"}
-if m:
-    hdr["Authorization"] = "Bearer " + m.group(1)
-d = s.get("https://www.macromicro.me/charts/data/53117", headers=hdr, timeout=30)
-print("data", d.status_code, d.headers.get("content-type"), len(d.text))
-print(d.text[:800].replace("\n", " "))
+PAGE = "https://www.macromicro.me/charts/53117/taiwan-taiex-maintenance-margin"
+with sync_playwright() as p:
+    b = p.chromium.launch(args=["--disable-blink-features=AutomationControlled"])
+    ctx = b.new_context(locale="zh-TW", user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36")
+    pg = ctx.new_page()
+    hits = []
+    pg.on("response", lambda r: hits.append(r) if "/charts/data/" in r.url else None)
+    r = pg.goto(PAGE, wait_until="domcontentloaded", timeout=60000)
+    print("first", r.status if r else None)
+    pg.wait_for_timeout(20000)
+    print("title", pg.title())
+    print("text", pg.inner_text("body")[:400].replace("\n", " "))
+    for h in hits:
+        print("data", h.url, h.status)
+        try:
+            j = h.json()
+            s = json.dumps(j)[:600]
+            print(s)
+        except Exception as e:
+            print("not json", e)
+    b.close()
