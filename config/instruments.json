@@ -1,5 +1,5 @@
 {
-  "_說明": "商品清單。新增、刪除、替換商品只要改這個檔案。source.type 可用：twse_stock（上市股）、tpex_stock（上櫃股）、twse_index（證交所指數，symbol 為指數中文全名）、taifex_fut（期交所期貨，symbol 為商品代號如 TX、MTX、TE）、twse_margin_ratio（自行計算的上市融資維持率，不需 symbol）、macromicro（財經M平方圖表，symbol 為圖表編號；網站有機器人驗證，連不上時該商品視為缺值，相關因子影響為 0）、yahoo（Yahoo Finance 代號，如 DX-Y.NYB、TWD=X、^SOX、^VIX、^TNX；可加 asof: \"14:00\" 表示取台北時間該時刻的小時線價格，用於 24 小時交易的匯率）。海外市場（收盤晚於台股）一律使用前一個已收盤交易日。ma：要計算的均線天數（需搭配 historySymbol 指定 Yahoo 歷史代號，例如 ^TWII）。tags：fx（匯率）、us（美股隔夜）、chip（籌碼）、macro（非價格指標，不列入「相對大盤」比較）。",
+  "_說明": "商品清單。新增、刪除、替換商品只要改這個檔案。source.type 可用：twse_stock（上市股）、tpex_stock（上櫃股）、twse_index（證交所指數，symbol 為指數中文全名）、taifex_fut（期交所期貨，symbol 為商品代號如 TX、MTX、TE）、twse_margin_ratio（自行計算的上市融資維持率，不需 symbol）、macromicro（財經M平方圖表，symbol 為圖表編號；網站有機器人驗證，連不上時該商品視為缺值，相關因子影響為 0）、yahoo（Yahoo Finance 代號，如 DX-Y.NYB、TWD=X、^SOX、^VIX、^TNX；可加 asof: \"14:00\" 表示取台北時間該時刻的小時線價格，用於 24 小時交易的匯率）。海外市場（收盤晚於台股）一律使用前一個已收盤交易日。ma：要計算的均線天數（需搭配 historySymbol 指定 Yahoo 歷史代號，例如 ^TWII）。note：顯示在頁面上的資料說明。tags：fx（匯率）、us（美股隔夜）、chip（籌碼）、macro（非價格指標，不列入「相對大盤」比較）。",
   "benchmark": "TAIEX",
   "instruments": [
     {"id": "DXY", "name": "美元指數", "group": "匯率", "source": {"type": "yahoo", "symbol": "DX-Y.NYB", "asof": "14:00"}, "tags": ["fx"], "role": "全球美元強弱；美元走弱時台幣通常升值"},
@@ -10,6 +10,6 @@
     {"id": "VIX", "name": "VIX 指數", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^VIX"}, "tags": ["us", "macro"], "role": "美股恐慌指數，前一個美股交易日收盤；急升代表全球避險情緒升溫"},
     {"id": "SOX", "name": "費城半導體指數", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^SOX"}, "tags": ["us"], "role": "前一個美股交易日收盤，台灣半導體權值股的領先指標"},
     {"id": "TNX", "name": "美國十年債殖利率", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^TNX"}, "tags": ["us", "macro"], "role": "單位 %，前一個美股交易日收盤；殖利率上升壓抑高本益比的科技股評價"},
-    {"id": "MARGIN", "name": "大盤融資維持率", "group": "籌碼", "source": {"type": "macromicro", "symbol": "53117"}, "tags": ["chip", "macro"], "unit": "%", "role": "來源：財經M平方（台股大盤融資維持率）；無法連線時影響設為 0。低於 140% 附近容易出現斷頭賣壓"}
+    {"id": "MARGIN", "name": "大盤融資維持率", "group": "籌碼", "source": {"type": "twse_margin_ratio"}, "tags": ["chip", "macro"], "unit": "%", "note": "自行計算（上市個股融資餘額 × 收盤價 ÷ 融資金額），參考財經M平方，數值可能略有差異", "role": "低於 140% 附近容易出現斷頭賣壓"}
   ]
 }

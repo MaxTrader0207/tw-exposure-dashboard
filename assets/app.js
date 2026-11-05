@@ -179,7 +179,7 @@
     chg: (f, d) => `${name(d.a)} ${fmtNum(q[d.a]?.last)}，變動 ${sgn(f.raw, 1)}${d.mult === 100 ? ' bp' : ''}${(byId[d.a]?.tags || []).includes('us') ? '（前一美股交易日）' : ''}。`,
     level: (f, d) => {
       const v = q[d.a]?.last, u = byId[d.a]?.unit || '';
-      return `${name(d.a)} ${fmtNum(v)}${u}${q[d.a]?.asOf ? `（資料日 ${q[d.a].asOf}）` : ''}（前一日 ${q[d.a]?.chg == null ? '—' : sgn(q[d.a].chg, 2) + u}），${f.raw >= 0 ? '高於' : '低於'}中性值 ${d.center}${u} ${Math.abs(f.raw).toFixed(1)}${u}。${d.a === 'MARGIN' && v < 145 ? '已接近斷頭警戒區，留意被動賣壓。' : ''}`;
+      return `${name(d.a)} ${fmtNum(v)}${u}${byId[d.a]?.note ? `（${byId[d.a].note}）` : ''}${q[d.a]?.asOf ? `（資料日 ${q[d.a].asOf}）` : ''}（前一日 ${q[d.a]?.chg == null ? '—' : sgn(q[d.a].chg, 2) + u}），${f.raw >= 0 ? '高於' : '低於'}中性值 ${d.center}${u} ${Math.abs(f.raw).toFixed(1)}${u}。${d.a === 'MARGIN' && v < 145 ? '已接近斷頭警戒區，留意被動賣壓。' : ''}`;
     },
     spread: (f, d) => {
       const a = q[d.a]?.pct, b = q[d.b]?.pct;
@@ -239,7 +239,7 @@
       const card = el('div', {class: 'icard'},
         el('div', {class: 'top'}, el('b', {}, i.name), el('span', {class: 'pct ' + cls(p)}, pct(p))),
         el('div', {}, el('span', {class: 'tag'}, i.group), ...(i.tags || []).map((t) => el('span', {class: 'tag'}, t))),
-        el('p', {class: 'muted'}, i.role || ''),
+        el('p', {class: 'muted'}, (i.role || '') + (i.note ? '（' + i.note + '）' : '')),
         el('div', {class: 'stats'},
           el('div', {}, '相對大盤', el('b', {class: cls(rb)}, i.id === bench ? '—' : sgn(rb))),
           el('div', {}, `β（${rel.days}日）`, el('b', {}, rel.beta[i.id] == null || i.id === bench ? '—' : rel.beta[i.id].toFixed(2))),
@@ -333,7 +333,7 @@
     qt.append(el('tr', {}, ...['商品', '代號', '來源', '類別', '成交', '漲跌', '幅度'].map((h, i) => el('th', {class: i >= 4 ? 'n' : ''}, h))));
     ins.forEach((i) => {
       const r = q[i.id] || {};
-      qt.append(el('tr', {}, el('td', {}, i.name), el('td', {}, i.source.symbol || '—'), el('td', {}, i.source.type), el('td', {}, i.group),
+      qt.append(el('tr', {}, el('td', {}, i.name, ...(i.note ? [el('div', {class: 'muted'}, '※ ' + i.note)] : [])), el('td', {}, i.source.symbol || '—'), el('td', {}, i.source.type), el('td', {}, i.group),
         el('td', {class: 'n ' + cls(r.chg)}, fmtNum(r.last) + (i.unit && r.last != null ? i.unit : '')), el('td', {class: 'n ' + cls(r.chg)}, r.chg == null ? '—' : sgn(r.chg, 2)), el('td', {class: 'n ' + cls(r.pct)}, pct(r.pct))));
     });
   }
