@@ -213,7 +213,20 @@ def yahoo(symbol, d, asof=None):
 # ---------- 大盤融資維持率 ----------
 
 def twse_margin_ratio(_symbol, d):
-    """上市融資維持率 ＝ Σ(各股融資餘額張數 × 1000 × 收盤價) ÷ 融資金額。漲跌由主程式依前一日補上。"""
+    """上市融資維持率，固定使用 d 之前最近一個交易日（證交所融資資料晚上才公布，下午抓取時當天還沒有）。"""
+    for back in range(1, 10):
+        day = d - timedelta(days=back)
+        if day.weekday() >= 5:
+            continue
+        q = margin_ratio_on(day)
+        if q:
+            q["asOf"] = str(day)
+            return q
+    return None
+
+
+def margin_ratio_on(d):
+    """d 當天的上市融資維持率 ＝ Σ(各股融資餘額張數 × 1000 × 收盤價) ÷ 融資金額。漲跌由主程式依前一筆補上。"""
     j = http("GET", f"https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={d:%Y%m%d}&selectType=ALL&response=json").json()
     if j.get("stat") != "OK" or j.get("date") != f"{d:%Y%m%d}":
         return None
@@ -242,7 +255,6 @@ def twse_margin_ratio(_symbol, d):
                     value += b * 1000 * c
                     lots += b
     if not amount or not lots:
-        print(f"    融資維持率：找不到融資金額或個股餘額（amount={amount}, lots={lots}）")
         return None
     return {"last": round(value / amount * 100, 2), "chg": None, "pct": None}
 

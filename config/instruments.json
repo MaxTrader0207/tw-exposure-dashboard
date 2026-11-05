@@ -10,6 +10,6 @@
     {"id": "VIX", "name": "VIX 指數", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^VIX"}, "tags": ["us", "macro"], "role": "美股恐慌指數，前一個美股交易日收盤；急升代表全球避險情緒升溫"},
     {"id": "SOX", "name": "費城半導體指數", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^SOX"}, "tags": ["us"], "role": "前一個美股交易日收盤，台灣半導體權值股的領先指標"},
     {"id": "TNX", "name": "美國十年債殖利率", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^TNX"}, "tags": ["us", "macro"], "role": "單位 %，前一個美股交易日收盤；殖利率上升壓抑高本益比的科技股評價"},
-    {"id": "MARGIN", "name": "大盤融資維持率", "group": "籌碼", "source": {"type": "twse_margin_ratio"}, "tags": ["chip", "macro"], "unit": "%", "note": "自行計算（上市個股融資餘額 × 收盤價 ÷ 融資金額），參考財經M平方，數值可能略有差異", "role": "低於 140% 附近容易出現斷頭賣壓"}
+    {"id": "MARGIN", "name": "大盤融資維持率", "group": "籌碼", "source": {"type": "twse_margin_ratio"}, "tags": ["chip", "macro"], "unit": "%", "note": "自行計算（上市個股融資餘額 × 收盤價 ÷ 融資金額），使用前一交易日數值，參考財經M平方，數值可能略有差異", "role": "低於 140% 附近容易出現斷頭賣壓"}
   ]
 }
