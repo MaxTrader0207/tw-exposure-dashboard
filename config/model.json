@@ -1,28 +1,157 @@
 {
   "_說明": "水位模型。factors 只需定義『看什麼、預期方向』：type、a/b/tag/n/demean、prior（+1 越高越偏多、−1 越高越偏空）。mean、std、weight 由 scripts/calibrate.py 以歷史資料推導後自動寫入，不需手調。weight 的單位是『該因子偏離平均 1 個標準差時，水位變動幾個百分點』。type 可用：pct、spread、basis、breadth、rel_avg（單日型），sum_pct（n 日累計漲跌）、ma_gap（相對 n 日均線乖離 %）、vol（n 日年化波動率）。demean：n 表示減去自身近 n 日平均。policy 的 base、slopePerSigma、floor、cap 是風險偏好設定，不是由資料推導。",
   "horizonDays": 5,
-  "calibratedAt": null,
+  "calibratedAt": "2026-11-05",
   "factors": [
-    {"key": "fx", "name": "台幣匯率", "type": "pct", "a": "USDTWD", "prior": -1, "desc": "台匯當日漲跌幅（台北 14:00 取樣）；台幣貶值偏空", "mean": 0, "std": 0.3, "weight": -3},
-    {"key": "fx5", "name": "台幣 5 日趨勢", "type": "sum_pct", "a": "USDTWD", "n": 5, "prior": -1, "desc": "台匯近 5 日累計漲跌；持續貶值代表外資持續匯出", "mean": 0, "std": 0.7, "weight": -3},
-    {"key": "fxdiv", "name": "台幣相對美元", "type": "spread", "a": "USDTWD", "b": "DXY", "prior": -1, "desc": "台匯% − 美元指數%；扣除全球美元因素後的台灣特有資金流向", "mean": 0, "std": 0.4, "weight": -3},
-    {"key": "trend", "name": "大盤當日動能", "type": "pct", "a": "TAIEX", "prior": 1, "desc": "加權指數當日漲跌幅", "mean": 0, "std": 1.2, "weight": 3},
-    {"key": "trend60", "name": "大盤中期趨勢", "type": "ma_gap", "a": "TAIEX", "n": 60, "prior": 1, "desc": "加權指數相對 60 日均線的乖離 %（時間序列動能）", "mean": 2, "std": 5, "weight": 3},
-    {"key": "basis", "name": "期現價差變化", "type": "basis", "a": "TXF", "b": "TAIEX", "demean": 20, "prior": 1, "desc": "(台指期 − 加權指) ÷ 加權指，減去近 20 日平均以去除除息季逆價差", "mean": 0, "std": 0.15, "weight": 3},
-    {"key": "anchor", "name": "台積電", "type": "pct", "a": "2330", "prior": 1, "desc": "最大權值股當日漲跌幅", "mean": 0, "std": 1.8, "weight": 3},
-    {"key": "breadth", "name": "AI 族群廣度", "type": "breadth", "tag": "ai_chain", "prior": 1, "desc": "族群內 (上漲檔數 − 下跌檔數) ÷ 檔數", "mean": 0, "std": 0.6, "weight": 3},
-    {"key": "chain", "name": "AI 族群相對強弱", "type": "rel_avg", "tag": "ai_chain", "b": "TAIEX", "prior": 1, "desc": "族群平均漲跌 − 加權指漲跌", "mean": 0, "std": 1.2, "weight": 3}
+    {
+      "key": "fx",
+      "name": "台幣匯率",
+      "type": "pct",
+      "a": "USDTWD",
+      "prior": -1,
+      "desc": "台匯當日漲跌幅（台北 14:00 取樣）；台幣貶值偏空",
+      "mean": -0.0005,
+      "std": 0.4337,
+      "weight": 0.0
+    },
+    {
+      "key": "fx5",
+      "name": "台幣 5 日趨勢",
+      "type": "sum_pct",
+      "a": "USDTWD",
+      "n": 5,
+      "prior": -1,
+      "desc": "台匯近 5 日累計漲跌；持續貶值代表外資持續匯出",
+      "mean": -0.0168,
+      "std": 1.0503,
+      "weight": 0.0
+    },
+    {
+      "key": "fxdiv",
+      "name": "台幣相對美元",
+      "type": "spread",
+      "a": "USDTWD",
+      "b": "DXY",
+      "prior": -1,
+      "desc": "台匯% − 美元指數%；扣除全球美元因素後的台灣特有資金流向",
+      "mean": 0.0098,
+      "std": 0.469,
+      "weight": 0.0
+    },
+    {
+      "key": "trend",
+      "name": "大盤當日動能",
+      "type": "pct",
+      "a": "TAIEX",
+      "prior": 1,
+      "desc": "加權指數當日漲跌幅",
+      "mean": 0.1765,
+      "std": 1.6923,
+      "weight": 0.0
+    },
+    {
+      "key": "trend60",
+      "name": "大盤中期趨勢",
+      "type": "ma_gap",
+      "a": "TAIEX",
+      "n": 60,
+      "prior": 1,
+      "desc": "加權指數相對 60 日均線的乖離 %（時間序列動能）",
+      "mean": 5.2176,
+      "std": 6.8391,
+      "weight": 0.0
+    },
+    {
+      "key": "basis",
+      "name": "期現價差變化",
+      "type": "basis",
+      "a": "TXF",
+      "b": "TAIEX",
+      "demean": 20,
+      "prior": 1,
+      "desc": "(台指期 − 加權指) ÷ 加權指，減去近 20 日平均以去除除息季逆價差",
+      "mean": 0.0029,
+      "std": 0.3814,
+      "weight": 0.0
+    },
+    {
+      "key": "anchor",
+      "name": "台積電",
+      "type": "pct",
+      "a": "2330",
+      "prior": 1,
+      "desc": "最大權值股當日漲跌幅",
+      "mean": 0.2097,
+      "std": 2.0689,
+      "weight": 0.0
+    },
+    {
+      "key": "breadth",
+      "name": "AI 族群廣度",
+      "type": "breadth",
+      "tag": "ai_chain",
+      "prior": 1,
+      "desc": "族群內 (上漲檔數 − 下跌檔數) ÷ 檔數",
+      "mean": 0.0081,
+      "std": 0.6442,
+      "weight": 0.0
+    },
+    {
+      "key": "chain",
+      "name": "AI 族群相對強弱",
+      "type": "rel_avg",
+      "tag": "ai_chain",
+      "b": "TAIEX",
+      "prior": 1,
+      "desc": "族群平均漲跌 − 加權指漲跌",
+      "mean": 0.0652,
+      "std": 1.3688,
+      "weight": 0.0
+    }
   ],
   "policy": {
-    "base": 60, "slopePerSigma": 15, "floor": 10, "cap": 90,
-    "volOverlay": {"enabled": false, "a": "TAIEX", "n": 20, "target": 18, "minMult": 0.5},
+    "base": 60,
+    "slopePerSigma": 15,
+    "floor": 10,
+    "cap": 90,
+    "volOverlay": {
+      "enabled": false,
+      "a": "TAIEX",
+      "n": 20,
+      "target": 19.4,
+      "minMult": 0.5
+    },
     "tiers": [
-      {"min": 80, "label": "積極加碼", "advice": "訊號明顯偏多，可提高持股並以台指期多單放大曝險。"},
-      {"min": 65, "label": "偏多持有", "advice": "訊號偏多，維持多數部位，拉回權值股可承接。"},
-      {"min": 50, "label": "中性", "advice": "訊號接近歷史平均，維持基準部位，不追高也不殺低。"},
-      {"min": 35, "label": "中性偏保守", "advice": "訊號偏空，維持核心部位、暫停加碼；高 β 族群先減碼。"},
-      {"min": 20, "label": "保守", "advice": "多數訊號偏空，持股降至少數核心，可用小台空單或賣權避險。"},
-      {"min": -1e9, "label": "防守", "advice": "訊號極度偏空，以現金與避險部位為主。"}
+      {
+        "min": 80,
+        "label": "積極加碼",
+        "advice": "訊號明顯偏多，可提高持股並以台指期多單放大曝險。"
+      },
+      {
+        "min": 65,
+        "label": "偏多持有",
+        "advice": "訊號偏多，維持多數部位，拉回權值股可承接。"
+      },
+      {
+        "min": 50,
+        "label": "中性",
+        "advice": "訊號接近歷史平均，維持基準部位，不追高也不殺低。"
+      },
+      {
+        "min": 35,
+        "label": "中性偏保守",
+        "advice": "訊號偏空，維持核心部位、暫停加碼；高 β 族群先減碼。"
+      },
+      {
+        "min": 20,
+        "label": "保守",
+        "advice": "多數訊號偏空，持股降至少數核心，可用小台空單或賣權避險。"
+      },
+      {
+        "min": -1000000000.0,
+        "label": "防守",
+        "advice": "訊號極度偏空，以現金與避險部位為主。"
+      }
     ]
   },
   "correlationWindow": 20
