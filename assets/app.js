@@ -105,7 +105,7 @@
     hbar($('factorChart'), today.factors.map((f) => ({label: f.name, value: f.contrib, tip: f.missing ? '資料不足，以 0 分計' : f.desc})), {domain: [-m, m], fmt: (v) => sgn(v, 1)});
   }
   function drawRel() {
-    const items = ins.filter((i) => i.id !== bench && !(i.tags || []).includes('fx') && q[i.id]?.pct != null)
+    const items = ins.filter((i) => i.id !== bench && !(i.tags || []).some((t) => t === 'fx' || t === 'macro') && q[i.id]?.pct != null)
       .map((i) => ({label: i.name, value: q[i.id].pct, tip: i.role})).sort((a, b) => b.value - a.value);
     const ref = q[bench]?.pct;
     const m = Math.max(0.5, ...items.map((d) => Math.abs(d.value)), Math.abs(ref || 0)) * 1.1;
@@ -149,7 +149,12 @@
   /* ---------- 今日解讀（依因子類型自動產生） ---------- */
   const tagNames = (tag) => Engine.members(ins, tag).map(name);
   const NARRATE = {
-    pct: (f, d) => `${name(d.a)} ${pct(q[d.a]?.pct)}。`,
+    pct: (f, d) => `${name(d.a)} ${pct(q[d.a]?.pct)}${(byId[d.a]?.tags || []).includes('us') ? '（前一美股交易日）' : ''}。`,
+    chg: (f, d) => `${name(d.a)} ${fmtNum(q[d.a]?.last)}，變動 ${sgn(f.raw, 1)}${d.mult === 100 ? ' bp' : ''}${(byId[d.a]?.tags || []).includes('us') ? '（前一美股交易日）' : ''}。`,
+    level: (f, d) => {
+      const v = q[d.a]?.last, u = byId[d.a]?.unit || '';
+      return `${name(d.a)} ${fmtNum(v)}${u}（前一日 ${q[d.a]?.chg == null ? '—' : sgn(q[d.a].chg, 2) + u}），${f.raw >= 0 ? '高於' : '低於'}中性值 ${d.center}${u} ${Math.abs(f.raw).toFixed(1)}${u}。${d.a === 'MARGIN' && v < 145 ? '已接近斷頭警戒區，留意被動賣壓。' : ''}`;
+    },
     spread: (f, d) => {
       const a = q[d.a]?.pct, b = q[d.b]?.pct;
       let s = `${name(d.a)} ${pct(a)}、${name(d.b)} ${pct(b)}，落差 ${sgn(f.raw)} 個百分點。`;
@@ -229,12 +234,18 @@
   }
 
   /* ---------- 試算器 ---------- */
-  const needLast = new Set(model.factors.filter((f) => f.type === 'basis').flatMap((f) => [f.a, f.b]));
-  const fields = [];
-  ins.forEach((i) => {
-    if (needLast.has(i.id)) fields.push({id: i.id, col: 'last', label: `${i.name} 點位`});
-    fields.push({id: i.id, col: 'pct', label: `${i.name} 漲跌 %`});
+  // 依因子類型決定每個商品要輸入哪個欄位：漲跌幅、漲跌值或數值本身
+  const need = {};
+  const add = (id, c) => { if (id) (need[id] ||= new Set()).add(c); };
+  model.factors.forEach((f) => {
+    if (['pct', 'spread'].includes(f.type)) { add(f.a, 'pct'); add(f.b, 'pct'); }
+    if (f.type === 'chg') add(f.a, 'chg');
+    if (['basis', 'level'].includes(f.type)) { add(f.a, 'last'); add(f.b, 'last'); }
+    if (['breadth', 'rel_avg'].includes(f.type)) { Engine.members(ins, f.tag).forEach((id) => add(id, 'pct')); add(f.b, 'pct'); }
   });
+  const colLabel = {last: (i) => `${i.name}${i.unit ? '（' + i.unit + '）' : ' 數值'}`, pct: (i) => `${i.name} 漲跌 %`, chg: (i) => `${i.name} 漲跌`};
+  const fields = [];
+  ins.forEach((i) => ['last', 'pct', 'chg'].forEach((c) => { if (need[i.id]?.has(c)) fields.push({id: i.id, col: c, label: colLabel[c](i)}); }));
   const inputs = fields.map((f) => {
     const input = el('input', {type: 'number', step: 'any', inputmode: 'decimal'});
     input.dataset.id = f.id; input.dataset.col = f.col;
@@ -281,8 +292,8 @@
     qt.append(el('tr', {}, ...['商品', '代號', '來源', '類別', '成交', '漲跌', '幅度'].map((h, i) => el('th', {class: i >= 4 ? 'n' : ''}, h))));
     ins.forEach((i) => {
       const r = q[i.id] || {};
-      qt.append(el('tr', {}, el('td', {}, i.name), el('td', {}, i.source.symbol), el('td', {}, i.source.type), el('td', {}, i.group),
-        el('td', {class: 'n ' + cls(r.chg)}, fmtNum(r.last)), el('td', {class: 'n ' + cls(r.chg)}, r.chg == null ? '—' : sgn(r.chg, 2)), el('td', {class: 'n ' + cls(r.pct)}, pct(r.pct))));
+      qt.append(el('tr', {}, el('td', {}, i.name), el('td', {}, i.source.symbol || '—'), el('td', {}, i.source.type), el('td', {}, i.group),
+        el('td', {class: 'n ' + cls(r.chg)}, fmtNum(r.last) + (i.unit && r.last != null ? i.unit : '')), el('td', {class: 'n ' + cls(r.chg)}, r.chg == null ? '—' : sgn(r.chg, 2)), el('td', {class: 'n ' + cls(r.pct)}, pct(r.pct))));
     });
   }
 

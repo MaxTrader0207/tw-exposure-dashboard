@@ -160,23 +160,91 @@ def taifex_fut(symbol, d):
 
 # ---------- Yahoo Finance（任意代號，也是台股備援） ----------
 
-def yahoo(symbol, d):
-    j = http("GET", f"https://query1.finance.yahoo.com/v8/finance/chart/{requests.utils.quote(symbol)}?range=3mo&interval=1d").json()
-    res = j["chart"]["result"][0]
-    off = res["meta"].get("gmtoffset", 0)
-    closes = res["indicators"]["quote"][0]["close"]
-    bars = [(datetime.fromtimestamp(t + off, timezone.utc).date(), c) for t, c in zip(res.get("timestamp", []), closes) if c is not None]
-    today = [c for bd, c in bars if bd == d]
-    before = [c for bd, c in bars if bd < d]
-    if not before:
-        return None
-    if today:
-        last = today[-1]
-    elif d == datetime.now(TW).date() and res["meta"].get("regularMarketPrice") is not None:
-        last = res["meta"]["regularMarketPrice"]  # 盤中尚未形成日線時用即時價
+def yahoo_chart(symbol, interval, rng):
+    j = http("GET", f"https://query1.finance.yahoo.com/v8/finance/chart/{requests.utils.quote(symbol)}?range={rng}&interval={interval}").json()
+    return j["chart"]["result"][0]
+
+
+def yahoo_daily(symbol, rng="6mo"):
+    """回傳 ([(交易所當地日期, 收盤價)], 是否為台北時區交易所, meta)。"""
+    res = yahoo_chart(symbol, "1d", rng)
+    meta = res["meta"]
+    off = meta.get("gmtoffset", 0)
+    bars = {}
+    for t, c in zip(res.get("timestamp", []), res["indicators"]["quote"][0]["close"]):
+        if c is not None:
+            bars[datetime.fromtimestamp(t + off, timezone.utc).date()] = c
+    return sorted(bars.items()), meta.get("exchangeTimezoneName") == "Asia/Taipei", meta
+
+
+def yahoo_snapshots(symbol, asof="14:00", rng="1mo"):
+    """24 小時商品（匯率）在台北時間 asof 當下的價格：取收盤時間 ≤ asof 的最後一根小時線。"""
+    hh, mm = map(int, asof.split(":"))
+    res = yahoo_chart(symbol, "60m", rng)
+    snaps = {}
+    for t, c in zip(res.get("timestamp", []), res["indicators"]["quote"][0]["close"]):
+        if c is None:
+            continue
+        end = datetime.fromtimestamp(t, TW) + timedelta(hours=1)
+        if (end.hour, end.minute) <= (hh, mm) and end.weekday() < 5:
+            snaps[end.date()] = c
+    return sorted(snaps.items())
+
+
+def yahoo(symbol, d, asof=None):
+    if asof:
+        snaps = yahoo_snapshots(symbol, asof, "1mo" if (datetime.now(TW).date() - d).days < 25 else "6mo")
+        cur = [c for sd, c in snaps if sd == d]
+        prev = [c for sd, c in snaps if sd < d]
+        return quote(cur[-1], cur[-1] - prev[-1]) if cur and prev else None
+    bars, taipei, meta = yahoo_daily(symbol)
+    if taipei:
+        cur = [c for bd, c in bars if bd == d]
+        if not cur and d == datetime.now(TW).date() and meta.get("regularMarketPrice") is not None:
+            cur = [meta["regularMarketPrice"]]  # 尚未形成日線時用即時價
+        prev = [c for bd, c in bars if bd < d]
     else:
+        # 海外市場：台股收盤時當天尚未開盤或收盤，只能用前一個已收盤交易日。
+        done = [c for bd, c in bars if bd < d]
+        cur, prev = done[-1:], done[:-1]
+    return quote(cur[-1], cur[-1] - prev[-1]) if cur and prev else None
+
+
+# ---------- 大盤融資維持率 ----------
+
+def twse_margin_ratio(_symbol, d):
+    """上市融資維持率 ＝ Σ(各股融資餘額張數 × 1000 × 收盤價) ÷ 融資金額。漲跌由主程式依前一日補上。"""
+    j = http("GET", f"https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={d:%Y%m%d}&selectType=ALL&response=json").json()
+    if j.get("stat") != "OK" or j.get("date") != f"{d:%Y%m%d}":
         return None
-    return quote(last, last - before[-1])
+    amount = lots = None
+    value = 0.0
+    closes = {}
+    for t in twse_mi_index(d, "ALLBUT0999"):
+        f = t.get("fields") or []
+        if "證券代號" in f and "收盤價" in f:
+            for r in t.get("data", []):
+                closes[r[0].strip()] = num(r[f.index("收盤價")])
+    for t in j.get("tables", []):
+        f = [x.strip() for x in (t.get("fields") or [])]
+        rows = t.get("data", [])
+        if "項目" in f and "今日餘額" in f:
+            for r in rows:
+                if r[0].startswith("融資金額"):
+                    amount = num(r[f.index("今日餘額")]) * 1000
+        code_col = next((i for i, x in enumerate(f) if x in ("代號", "股票代號", "證券代號")), None)
+        if code_col is not None and "今日餘額" in f:
+            bal_col = f.index("今日餘額")  # 第一個今日餘額是融資
+            lots = 0
+            for r in rows:
+                b, c = num(r[bal_col]), closes.get(r[code_col].strip())
+                if b and c:
+                    value += b * 1000 * c
+                    lots += b
+    if not amount or not lots:
+        print(f"    融資維持率：找不到融資金額或個股餘額（amount={amount}, lots={lots}）")
+        return None
+    return {"last": round(value / amount * 100, 2), "chg": None, "pct": None}
 
 
 ADAPTERS = {
@@ -184,6 +252,7 @@ ADAPTERS = {
     "tpex_stock": tpex_stock,
     "twse_index": twse_index,
     "taifex_fut": taifex_fut,
+    "twse_margin_ratio": twse_margin_ratio,
     "yahoo": yahoo,
 }
 
@@ -197,14 +266,15 @@ def fetch_day(cfg, d):
     for ins in cfg["instruments"]:
         src = ins["source"]
         fn = ADAPTERS.get(src["type"])
+        extra = {k: v for k, v in src.items() if k not in ("type", "symbol")}
         try:
-            q = fn(src["symbol"], d) if fn else None
+            q = fn(src.get("symbol"), d, **extra) if fn else None
         except Exception as e:  # 單一商品失敗不影響其他商品
             print(f"    {ins['id']} 錯誤：{e}")
             q = None
         if q:
             quotes[ins["id"]] = q
-            print(f"  {ins['id']:<8} {q['last']:>12} {q['pct']:+.2f}%")
+            print(f"  {ins['id']:<8} {q['last']:>12} {'' if q['pct'] is None else format(q['pct'], '+.2f') + '%'}")
         else:
             failed.append(ins["id"])
             print(f"  {ins['id']:<8} 無資料")
@@ -233,12 +303,20 @@ def main():
             continue
         print(f"== {d}")
         quotes, failed = fetch_day(cfg, d)
+        # 沒有官方漲跌的數值（例如融資維持率）用前一個交易日補上漲跌
+        prev = [h for k, h in sorted(by_date.items()) if k < str(d)]
+        for k, q in quotes.items():
+            if q.get("chg") is None:
+                p = next((h["quotes"][k]["last"] for h in reversed(prev) if k in h["quotes"]), None)
+                if p:
+                    q["chg"] = round(q["last"] - p, 4)
+                    q["pct"] = round(q["chg"] / p * 100, 2)
         if len(quotes) < len(cfg["instruments"]) / 2:
             print(f"{d} 成功不到一半，不寫入。")
             continue
         by_date[str(d)] = {
             "date": str(d),
-            "source": "證交所／櫃買／期交所官方資料，美元與匯率為 Yahoo Finance（GitHub Actions 自動抓取）",
+            "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
             "fetchedAt": datetime.now(TW).isoformat(timespec="seconds"),
             "missing": failed,
             "quotes": quotes,

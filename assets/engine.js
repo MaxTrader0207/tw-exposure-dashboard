@@ -11,6 +11,8 @@
   // 每個因子類型一個函式；要新增類型就在這裡加一個。
   const FACTOR_TYPES = {
     pct: (f, q) => num(q[f.a]?.pct),
+    chg: (f, q) => { const v = num(q[f.a]?.chg); return v == null ? null : v * (f.mult ?? 1); },
+    level: (f, q) => { const v = num(q[f.a]?.last); return v == null ? null : v - (f.center ?? 0); },
     spread: (f, q) => {
       const a = num(q[f.a]?.pct), b = num(q[f.b]?.pct);
       return a == null || b == null ? null : a - b;

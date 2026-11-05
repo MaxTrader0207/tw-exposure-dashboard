@@ -37,7 +37,8 @@ assets/app.js             儀表板畫面（所有區塊依設定自動產生）
 | `tpex_stock` | `3324` | 上櫃股票（櫃買中心 OpenAPI） |
 | `twse_index` | `發行量加權股價指數`、`電子類指數` | 證交所指數，填中文全名 |
 | `taifex_fut` | `TX`、`MTX`、`TE`、`TF` | 期交所期貨近月一般盤 |
-| `yahoo` | `DX-Y.NYB`、`TWD=X`、`^SOX`、`NVDA` | 任何 Yahoo Finance 代號 |
+| `twse_margin_ratio` | （不需要） | 上市大盤融資維持率，由證交所個股融資餘額與收盤價計算 |
+| `yahoo` | `DX-Y.NYB`、`TWD=X`、`^SOX`、`^VIX`、`^TNX` | 任何 Yahoo Finance 代號；海外市場用前一個已收盤交易日，加 `"asof": "14:00"` 取台北時間小時線（匯率用） |
 
 `tags` 決定商品屬於哪個族群；族群因子（`breadth`、`rel_avg`）會自動納入同標籤的所有商品，所以加一檔進 `ai_chain` 就會進入族群計算。
 
@@ -47,7 +48,7 @@ assets/app.js             儀表板畫面（所有區塊依設定自動產生）
 
 `config/model.json` 的每個因子：
 
-- `type`：`pct`、`spread`、`basis`、`breadth`、`rel_avg`
+- `type`：`pct`、`chg`（漲跌值 × `mult`）、`level`（數值 − `center`）、`spread`、`basis`、`breadth`、`rel_avg`
 - `a`／`b`：商品 id；`tag`：族群標籤
 - `weight`：權重；`scale`：原始值到這個大小時計滿分；`dir`：1 越高越好、−1 越高越差
 
