@@ -371,82 +371,6 @@
   }
  },
  {
-  "date": "2026-09-25",
-  "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T13:38:58+08:00",
-  "missing": [
-   "TXF",
-   "TAIEX",
-   "2330",
-   "MARGIN"
-  ],
-  "quotes": {
-   "DXY": {
-    "last": 101.231,
-    "chg": 0.063,
-    "pct": 0.06
-   },
-   "USDTWD": {
-    "last": 31.746,
-    "chg": -0.073,
-    "pct": -0.23
-   },
-   "VIX": {
-    "last": 15.67,
-    "chg": 0.49,
-    "pct": 3.23
-   },
-   "SOX": {
-    "last": 12492.54,
-    "chg": -41.7402,
-    "pct": -0.33
-   },
-   "TNX": {
-    "last": 5.162,
-    "chg": 0.048,
-    "pct": 0.94
-   }
-  }
- },
- {
-  "date": "2026-09-28",
-  "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T13:39:11+08:00",
-  "missing": [
-   "TXF",
-   "TAIEX",
-   "2330",
-   "MARGIN"
-  ],
-  "quotes": {
-   "DXY": {
-    "last": 101.137,
-    "chg": -0.094,
-    "pct": -0.09
-   },
-   "USDTWD": {
-    "last": 31.797,
-    "chg": 0.051,
-    "pct": 0.16
-   },
-   "VIX": {
-    "last": 14.87,
-    "chg": -0.8,
-    "pct": -5.11
-   },
-   "SOX": {
-    "last": 12668.9297,
-    "chg": 176.3896,
-    "pct": 1.41
-   },
-   "TNX": {
-    "last": 5.184,
-    "chg": 0.022,
-    "pct": 0.43
-   }
-  }
- },
- {
   "date": "2026-09-29",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
   "fetchedAt": "2026-11-05T13:39:26+08:00",
@@ -867,44 +791,6 @@
     "last": 197.06,
     "chg": -1.85,
     "pct": -0.93
-   }
-  }
- },
- {
-  "date": "2026-10-09",
-  "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T13:41:18+08:00",
-  "missing": [
-   "TXF",
-   "TAIEX",
-   "2330",
-   "MARGIN"
-  ],
-  "quotes": {
-   "DXY": {
-    "last": 102.004,
-    "chg": -0.32,
-    "pct": -0.31
-   },
-   "USDTWD": {
-    "last": 31.912,
-    "chg": 0.012,
-    "pct": 0.04
-   },
-   "VIX": {
-    "last": 15.41,
-    "chg": 0.33,
-    "pct": 2.19
-   },
-   "SOX": {
-    "last": 12623.71,
-    "chg": -442.4404,
-    "pct": -3.39
-   },
-   "TNX": {
-    "last": 5.231,
-    "chg": -0.046,
-    "pct": -0.87
    }
   }
  },
@@ -1386,86 +1272,6 @@
   }
  },
  {
-  "date": "2026-10-23",
-  "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T13:43:41+08:00",
-  "missing": [
-   "TXF",
-   "TAIEX",
-   "MARGIN"
-  ],
-  "quotes": {
-   "DXY": {
-    "last": 101.682,
-    "chg": 0.192,
-    "pct": 0.19
-   },
-   "USDTWD": {
-    "last": 32.605,
-    "chg": 0.03,
-    "pct": 0.09
-   },
-   "2330": {
-    "last": 2385.0,
-    "chg": 0.0,
-    "pct": 0.0
-   },
-   "VIX": {
-    "last": 19.03,
-    "chg": 2.35,
-    "pct": 14.09
-   },
-   "SOX": {
-    "last": 10731.9805,
-    "chg": -773.5791,
-    "pct": -6.72
-   },
-   "TNX": {
-    "last": 4.953,
-    "chg": -0.193,
-    "pct": -3.75
-   }
-  }
- },
- {
-  "date": "2026-10-26",
-  "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T13:43:54+08:00",
-  "missing": [
-   "TXF",
-   "TAIEX",
-   "2330",
-   "MARGIN"
-  ],
-  "quotes": {
-   "DXY": {
-    "last": 101.697,
-    "chg": 0.015,
-    "pct": 0.01
-   },
-   "USDTWD": {
-    "last": 32.563,
-    "chg": -0.042,
-    "pct": -0.13
-   },
-   "VIX": {
-    "last": 19.45,
-    "chg": 0.42,
-    "pct": 2.21
-   },
-   "SOX": {
-    "last": 10779.46,
-    "chg": 47.4795,
-    "pct": 0.44
-   },
-   "TNX": {
-    "last": 4.988,
-    "chg": 0.035,
-    "pct": 0.71
-   }
-  }
- },
- {
   "date": "2026-10-27",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
   "fetchedAt": "2026-11-05T13:44:06+08:00",
@@ -1833,48 +1639,6 @@
     "last": 164.66,
     "chg": 1.99,
     "pct": 1.22
-   }
-  }
- },
- {
-  "date": "2026-11-05",
-  "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-05T13:45:37+08:00",
-  "missing": [
-   "TXF",
-   "TAIEX",
-   "MARGIN"
-  ],
-  "quotes": {
-   "DXY": {
-    "last": 101.238,
-    "chg": -0.226,
-    "pct": -0.22
-   },
-   "USDTWD": {
-    "last": 33.005,
-    "chg": 0.197,
-    "pct": 0.6
-   },
-   "2330": {
-    "last": 2235.0,
-    "chg": -25.0,
-    "pct": -1.11
-   },
-   "VIX": {
-    "last": 16.61,
-    "chg": -4.22,
-    "pct": -20.26
-   },
-   "SOX": {
-    "last": 10268.6504,
-    "chg": -331.75,
-    "pct": -3.13
-   },
-   "TNX": {
-    "last": 4.894,
-    "chg": -0.058,
-    "pct": -1.17
    }
   }
  }

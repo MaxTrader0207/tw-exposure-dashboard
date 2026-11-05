@@ -311,6 +311,9 @@ def main():
                 if p:
                     q["chg"] = round(q["last"] - p, 4)
                     q["pct"] = round(q["chg"] / p * 100, 2)
+        if cfg["benchmark"] not in quotes:
+            print(f"{d} 沒有{cfg['benchmark']}收盤資料（休市或尚未公布），不寫入。")
+            continue
         if len(quotes) < len(cfg["instruments"]) / 2:
             print(f"{d} 成功不到一半，不寫入。")
             continue
@@ -326,7 +329,7 @@ def main():
     if not wrote:
         print("沒有寫入任何資料。")
         return 0
-    out = sorted(by_date.values(), key=lambda h: h["date"])[-MAX_DAYS:]
+    out = [h for h in sorted(by_date.values(), key=lambda h: h["date"]) if cfg["benchmark"] in h["quotes"]][-MAX_DAYS:]
     HISTORY.parent.mkdir(exist_ok=True)
     HISTORY.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"寫入 {wrote} 天，歷史共 {len(out)} 天。")
