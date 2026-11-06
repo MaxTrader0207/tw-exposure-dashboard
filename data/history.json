@@ -1826,7 +1826,7 @@
  {
   "date": "2026-11-06",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-06T22:35:58+08:00",
+  "fetchedAt": "2026-11-06T23:16:40+08:00",
   "missing": [],
   "quotes": {
    "DXY": {
