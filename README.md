@@ -60,3 +60,9 @@ assets/app.js             儀表板畫面（所有區塊依設定自動產生）
 - Yahoo 的美元指數與台幣匯率是抓取當下的即時值，不是當日收盤。
 - 首次部署可在 Actions 手動執行並填「回補天數」（例如 45），一次補齊歷史，β 與相關係數立即可用。
 - 規則式模型，僅供部位管理參考，不構成投資建議。
+
+## 準時觸發（Cloudflare Worker）
+
+GitHub 免費排程常延遲數小時，所以由 `cloudflare/trigger-worker.js` 在台北時間平日 14:40、15:30 準時呼叫 GitHub 執行更新；`update.yml` 裡的 GitHub 排程保留作為備援，重複執行不會造成問題。
+
+設定：Cloudflare 後台建立 Worker 貼上程式 → Secret `GH_TOKEN`（fine-grained token，只授權本 repo，Actions: Read and write）→ Cron Triggers 加入 `40 6 * * MON-FRI` 與 `30 7 * * MON-FRI`（UTC）。開啟 Worker 網址可看到最近 5 次執行狀態。token 到期前記得更新。
