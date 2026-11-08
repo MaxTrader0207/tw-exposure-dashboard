@@ -1,9 +1,7 @@
 name: 重新推導模型權重
 
 on:
-  schedule:
-    # 每月第一個週六台北 10:00（UTC 02:00）用最新兩年資料重估
-    - cron: "0 2 1-7 * 6"
+  # 權重推導尚在 calib 分支開發中，暫不排程，只能手動執行
   workflow_dispatch:
 
 permissions:
