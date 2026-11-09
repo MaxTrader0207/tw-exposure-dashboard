@@ -29,7 +29,7 @@ def main():
             if ins["id"] in h["quotes"]:
                 break
             n += 1
-        if n >= a.days:
+        if n >= a.days and n < len(history):  # 從未有過資料的是新加入的商品，不列入
             problems.append({"id": ins["id"], "name": ins["name"], "days": n, "source": ins["source"]["type"],
                              "lastSeen": next((h["date"] for h in reversed(history) if ins["id"] in h["quotes"]), None)})
     out = {"checkedAt": datetime.now(fetch.TW).isoformat(timespec="seconds"), "date": history[-1]["date"], "threshold": a.days, "problems": problems}

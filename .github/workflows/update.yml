@@ -52,9 +52,11 @@ jobs:
       - name: 資料健康檢查（連續 2 個交易日缺資料就開 Issue 通知）
         id: health
         if: env.MODE != 'premarket'
+        continue-on-error: true
         run: python scripts/check_health.py --days 2
       - name: 開立或關閉異常通知
-        if: env.MODE != 'premarket'
+        if: env.MODE != 'premarket' && steps.health.outcome == 'success'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
