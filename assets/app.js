@@ -33,6 +33,7 @@
     $('meta').textContent = '尚無資料：等待 GitHub Actions 第一次收盤抓取。';
     return;
   }
+  const pm = await fetch('data/premarket.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const ins = cfg.instruments;
   const byId = Object.fromEntries(ins.map((i) => [i.id, i]));
   const name = (id) => byId[id]?.name || id;
@@ -157,6 +158,31 @@
     }
     const step = Math.ceil(n / Math.max(1, Math.floor((W - L - R) / 70)));
     series.forEach((d, i) => { if (i % step === 0 || i === n - 1) svg.append(sv('text', {x: L + i * bw + bw / 2, y: H - 8, 'text-anchor': 'middle', fill: 'var(--muted)'}, d.date.slice(5))); });
+  }
+
+  /* ---------- 盤前參考 ---------- */
+  function drawPremarket() {
+    // 只在盤前資料比最新收盤還新時顯示（16:00 正式更新後自動隱藏）
+    if (!pm || pm.date <= latest.date) return;
+    const r = Engine.computeDay(pm.quotes, model, ins);
+    const box = $('premarket');
+    box.hidden = false;
+    const d = r.exposure - today.exposure;
+    const t = new Date(pm.generatedAt).toLocaleTimeString('zh-TW', {hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei'});
+    const items = pm.updated.map((id) => {
+      const x = pm.quotes[id], i = byId[id], u = i?.unit || '';
+      const val = x.pct != null && !u ? pct(x.pct) : `${fmtNum(x.last)}${u}${x.chg != null ? '（' + sgn(x.chg, 2) + '）' : ''}`;
+      return el('span', {class: 'pm-item'}, `${i?.name || id}${x.session ? '（' + x.session + '）' : ''} `, el('b', {class: cls(x.pct ?? x.chg)}, val));
+    });
+    const moved = r.factors.map((f, k) => ({f, dv: f.contrib - today.factors[k].contrib})).filter((x) => Math.abs(x.dv) >= 1).sort((a, b) => Math.abs(b.dv) - Math.abs(a.dv));
+    box.append(
+      el('div', {class: 'pm-head'},
+        el('div', {}, el('span', {class: 'muted'}, `盤前參考水位｜${pm.date} ${t} 更新`),
+          el('div', {class: 'pm-val'}, r.exposure + '%', stanceBadge(r.tier),
+            el('span', {class: 'muted pm-delta'}, `較 ${latest.date} 收盤 ${d > 0 ? '+' : ''}${d} 個百分點`))),
+        el('p', {class: 'muted pm-note'}, `台股收盤資料沿用 ${pm.basedOn}，只換上開盤前已知的資料；今天 16:00 後更新為正式水位。`)),
+      el('div', {class: 'pm-items'}, ...items),
+      moved.length ? el('p', {class: 'muted'}, '主要變動：' + moved.slice(0, 4).map((x) => `${x.f.name} ${sgn(x.dv, 1)} 分`).join('、')) : el('p', {class: 'muted'}, '與昨日收盤相比，各因子沒有明顯變化。'));
   }
 
   /* ---------- 均線位置 ---------- */
@@ -358,6 +384,6 @@
   }
 
   const redraw = () => { drawFactor(); drawRel(); drawHist(); };
-  redraw(); drawMA(); drawInsights(); drawCards(); drawCorr(); fill(); runSim(); drawTables();
+  redraw(); drawPremarket(); drawMA(); drawInsights(); drawCards(); drawCorr(); fill(); runSim(); drawTables();
   let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(redraw, 150); });
 })();

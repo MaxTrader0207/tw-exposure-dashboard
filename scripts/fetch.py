@@ -137,7 +137,8 @@ def tpex_stock(symbol, d):
 
 # ---------- 期交所（CSV 下載，當天即有資料） ----------
 
-def taifex_fut(symbol, d):
+def taifex_fut(symbol, d, session="一般"):
+    """近月收盤。session="盤後" 取夜盤：期交所把夜盤標在下一個交易日（d 的夜盤＝前一晚 15:00 到 d 清晨 5:00）。"""
     r = http("POST", "https://www.taifex.com.tw/cht/3/futDataDown", data={
         "down_type": "1", "commodity_id": symbol, "commodity_id2": "",
         "queryStartDate": f"{d:%Y/%m/%d}", "queryEndDate": f"{d:%Y/%m/%d}"})
@@ -149,7 +150,7 @@ def taifex_fut(symbol, d):
     cand = [
         x for x in rows[1:]
         if len(x) > ix["交易時段"] and x[ix["交易日期"]].strip() == f"{d:%Y/%m/%d}"
-        and x[ix["契約"]].strip() == symbol and x[ix["交易時段"]].strip() == "一般"
+        and x[ix["契約"]].strip() == symbol and x[ix["交易時段"]].strip() == session
         and "/" not in x[ix["到期月份(週別)"]] and num(x[ix["收盤價"]]) is not None
     ]
     if not cand:
@@ -406,14 +407,78 @@ def fetch_day(cfg, d):
     return quotes, failed
 
 
+PREMARKET = ROOT / "data" / "premarket.json"
+
+
+def premarket(cfg, d):
+    """盤前參考：沿用最近一個交易日的台股收盤，換上昨晚已知的資料，寫到 data/premarket.json（不進歷史）。
+
+    更新項目：海外市場（前一個美股交易日收盤）、24 小時匯率（目前價格對比前一交易日 14:00）、
+    台指期換成夜盤收盤、融資維持率換成前一交易日（前晚才公布）。
+    """
+    history = json.loads(HISTORY.read_text(encoding="utf-8")) if HISTORY.exists() else []
+    base = [h for h in history if h["date"] < str(d)]
+    if not base:
+        print("沒有可沿用的收盤資料。")
+        return 1
+    base = base[-1]
+    quotes = json.loads(json.dumps(base["quotes"]))
+    updated, failed = [], []
+    for ins in cfg["instruments"]:
+        src, k = ins["source"], ins["id"]
+        q = None
+        try:
+            if src["type"] == "yahoo" and src.get("asof"):
+                _, _, meta = yahoo_daily(src["symbol"], "5d")
+                last, prev = meta.get("regularMarketPrice"), base["quotes"].get(k, {}).get("last")
+                q = quote(last, last - prev) if last is not None and prev else None
+            elif src["type"] == "yahoo":
+                q = yahoo(src["symbol"], d)
+            elif src["type"] == "taifex_fut":
+                q = taifex_fut(src["symbol"], d, session="盤後")
+                if q:
+                    q["session"] = "夜盤"
+            elif src["type"] == "twse_margin_ratio":
+                q = twse_margin_ratio(src.get("symbol"), d)
+                prev = base["quotes"].get(k, {}).get("last")
+                if q and prev:
+                    q["chg"] = round(q["last"] - prev, 4)
+                    q["pct"] = round(q["chg"] / prev * 100, 2)
+            else:
+                continue  # 台股盤中資料，開盤前沒有新數值
+        except Exception as e:
+            print(f"    {k} 錯誤：{e}")
+        if q:
+            for key in ("ma30", "ma60", "ma100"):  # 均線等附加欄位沿用
+                if key in quotes.get(k, {}):
+                    q.setdefault(key, quotes[k][key])
+            quotes[k] = q
+            updated.append(k)
+            print(f"  {k:<8} {q['last']:>12} {'' if q.get('pct') is None else format(q['pct'], '+.2f') + '%'}")
+        else:
+            failed.append(k)
+    out = {"date": str(d), "basedOn": base["date"], "generatedAt": datetime.now(TW).isoformat(timespec="seconds"),
+           "updated": updated, "missing": failed, "quotes": quotes}
+    PREMARKET.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"盤前參考 {d}：沿用 {base['date']} 收盤，更新 {updated}" + (f"，失敗 {failed}" if failed else ""))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--premarket", action="store_true", help="產生盤前參考水位（早上執行）")
     ap.add_argument("--date", help="YYYY-MM-DD，預設今天")
     ap.add_argument("--backfill", type=int, default=0, help="回補最近 N 個日曆日")
     ap.add_argument("--force", action="store_true", help="相容舊參數，無作用")
     a = ap.parse_args()
 
     cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
+    if a.premarket:
+        d = datetime.strptime(a.date, "%Y-%m-%d").date() if a.date else datetime.now(TW).date()
+        if d.weekday() >= 5:
+            print("週末不產生盤前參考。")
+            return 0
+        return premarket(cfg, d)
     end = datetime.strptime(a.date, "%Y-%m-%d").date() if a.date else datetime.now(TW).date()
     days = [end - timedelta(days=i) for i in range(a.backfill, -1, -1)] if a.backfill else [end]
 

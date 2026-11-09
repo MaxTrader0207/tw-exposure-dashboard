@@ -3,13 +3,19 @@ name: 每日更新水位資料
 on:
   schedule:
     # 備援用：主要由 Cloudflare Worker 準時觸發（見 cloudflare/trigger-worker.js）。
-    # 台北 16:00 與 17:00（UTC 08:00、09:00），週一到週五
+    # 台北 16:00 與 17:00（UTC 08:00、09:00），週一到週五：收盤資料
     - cron: "0 8 * * 1-5"
     - cron: "0 9 * * 1-5"
+    # 台北 07:00（UTC 前一日 23:00），週一到週五早上：盤前參考
+    - cron: "0 23 * * 0-4"
   workflow_dispatch:
     inputs:
+      mode:
+        description: "daily＝收盤資料；premarket＝盤前參考"
+        type: string
+        default: "daily"
       backfill:
-        description: "回補最近 N 個日曆日（0＝只抓今天）"
+        description: "回補最近 N 個日曆日（0＝只抓今天，僅 daily）"
         type: string
         default: "0"
       date:
@@ -27,20 +33,27 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      MODE: ${{ inputs.mode || (github.event.schedule == '0 23 * * 0-4' && 'premarket') || 'daily' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install requests
-      - name: 抓取收盤資料
-        run: python scripts/fetch.py --backfill "${{ inputs.backfill || '0' }}" ${{ inputs.date && format('--date {0}', inputs.date) || '' }}
+      - name: 抓取資料
+        run: |
+          if [ "$MODE" = "premarket" ]; then
+            python scripts/fetch.py --premarket ${{ inputs.date && format('--date {0}', inputs.date) || '' }}
+          else
+            python scripts/fetch.py --backfill "${{ inputs.backfill || '0' }}" ${{ inputs.date && format('--date {0}', inputs.date) || '' }}
+          fi
       - name: 提交資料
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/history.json
+          git add data/
           git diff --cached --quiet && echo "無新資料" && exit 0
-          git commit -m "data: $(TZ=Asia/Taipei date +%F) 收盤資料"
+          git commit -m "data: $(TZ=Asia/Taipei date +%F) $([ "$MODE" = premarket ] && echo 盤前參考 || echo 收盤資料)"
           git pull --rebase -q origin main
           git push

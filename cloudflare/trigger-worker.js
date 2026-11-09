@@ -10,12 +10,14 @@
  *   Triggers → Cron Triggers（UTC 時間）：
  *     0 8 * * MON-FRI    → 台北 16:00（外資、期貨三大法人等資料都已公布）
  *     0 9 * * MON-FRI    → 台北 17:00（補抓，資料延遲時）
+ *     0 23 * * SUN-THU   → 台北隔天 07:00（週一到週五早上），產生盤前參考水位
  *
  * 開啟 Worker 網址會顯示最近 5 次執行狀態，方便確認有沒有準時跑。
  */
 const REPO = 'MaxTrader0207/tw-exposure-dashboard';
 const WORKFLOW = 'update.yml';
 const API = 'https://api.github.com';
+const PREMARKET_CRON = '0 23 * * SUN-THU';
 
 function headers(env) {
   return {
@@ -26,11 +28,11 @@ function headers(env) {
   };
 }
 
-async function dispatch(env) {
+async function dispatch(env, mode) {
   const r = await fetch(`${API}/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`, {
     method: 'POST',
     headers: {...headers(env), 'Content-Type': 'application/json'},
-    body: JSON.stringify({ref: 'main'}),
+    body: JSON.stringify({ref: 'main', inputs: {mode}}),
   });
   if (r.status !== 204) throw new Error(`GitHub 回應 ${r.status}：${await r.text()}`);
 }
@@ -38,7 +40,7 @@ async function dispatch(env) {
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
-      dispatch(env)
+      dispatch(env, event.cron === PREMARKET_CRON ? 'premarket' : 'daily')
         .then(() => console.log(`已觸發 ${WORKFLOW}（cron ${event.cron}）`))
         .catch((e) => console.error(`觸發失敗：${e.message}`))
     );
@@ -51,7 +53,7 @@ export default {
     if (!r.ok) return new Response(`無法讀取 GitHub（${r.status}），請確認 GH_TOKEN 權限`, {status: 502});
     const runs = (await r.json()).workflow_runs || [];
     const tw = (t) => new Date(t).toLocaleString('zh-TW', {timeZone: 'Asia/Taipei', hour12: false});
-    const lines = runs.map((x) => `${tw(x.created_at)}　${x.event === 'workflow_dispatch' ? '準時觸發' : 'GitHub 排程'}　${x.conclusion || x.status}`);
+    const lines = runs.map((x) => `${tw(x.created_at)}　${x.event === 'workflow_dispatch' ? '準時觸發' : 'GitHub 排程'}　${x.display_title || ''}　${x.conclusion || x.status}`);
     return new Response(`台股水位儀表板｜最近 5 次更新\n\n${lines.join('\n')}\n`, {headers: {'Content-Type': 'text/plain; charset=utf-8'}});
   },
 };

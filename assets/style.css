@@ -64,3 +64,10 @@ footer{line-height:1.7}
 .stance.up{color:var(--up);background:color-mix(in srgb,var(--up) 12%,transparent)}
 .stance.down{color:var(--down);background:color-mix(in srgb,var(--down) 12%,transparent)}
 .stance.neutral{color:var(--muted);background:color-mix(in srgb,var(--muted) 12%,transparent)}
+.premarket{background:var(--panel);border:1px solid var(--line);border-left:3px solid #f59e0b;border-radius:10px;padding:14px 18px;display:flex;flex-direction:column;gap:8px}
+.pm-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.pm-val{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;font-size:32px;font-weight:600}
+.pm-delta{font-family:"Noto Sans TC",sans-serif;font-size:13px;font-weight:400}
+.pm-note{max-width:420px}
+.pm-items{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px}
+.pm-item b{font-family:"JetBrains Mono",monospace;font-weight:600}
