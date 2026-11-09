@@ -179,8 +179,24 @@
   const tagNames = (tag) => Engine.members(ins, tag).map(name);
   const NARRATE = {
     pct: (f, d) => `${name(d.a)} ${pct(q[d.a]?.pct)}${(byId[d.a]?.tags || []).includes('us') ? '（前一美股交易日）' : ''}。`,
-    chg: (f, d) => `${name(d.a)} ${fmtNum(q[d.a]?.last)}，變動 ${sgn(f.raw, 1)}${d.mult === 100 ? ' bp' : ''}${(byId[d.a]?.tags || []).includes('us') ? '（前一美股交易日）' : ''}。`,
+    chg: (f, d) => {
+      const v = q[d.a]?.last, u = byId[d.a]?.unit || '';
+      if (u === '口') {
+        const side = v < 0 ? '淨空單' : '淨多單';
+        const grew = (v < 0 && f.raw < 0) || (v > 0 && f.raw > 0);
+        return `${name(d.a)} ${side} ${fmtNum(Math.abs(v))} 口，${side}${grew ? '增加' : '減少'} ${fmtNum(Math.abs(f.raw))} 口${v < 0 ? (f.raw < 0 ? '，外資加碼避險或看空' : '，外資回補空單') : ''}。`;
+      }
+      return `${name(d.a)} ${fmtNum(v)}，變動 ${sgn(f.raw, 1)}${d.mult === 100 ? ' bp' : ''}${(byId[d.a]?.tags || []).includes('us') ? '（前一美股交易日）' : ''}。`;
+    },
     level: (f, d) => {
+      if (d.a === 'FINI' || (byId[d.a]?.unit === '億' && !d.center)) {
+        const v = q[d.a]?.last;
+        return `外資${v >= 0 ? '買超' : '賣超'} ${fmtNum(Math.abs(v))} 億元${q[d.a]?.gross ? `，約佔外資成交 ${(Math.abs(v) / q[d.a].gross * 100).toFixed(1)}%` : ''}。`;
+      }
+      if (q[d.a]?.up != null) {
+        const x = q[d.a], idx = q[bench]?.pct;
+        return `上漲 ${fmtNum(x.up)} 家、下跌 ${fmtNum(x.down)} 家，廣度 ${sgn(x.last, 1)}%。${idx > 0 && x.last < 0 ? '指數上漲但多數股票下跌，屬權值股撐盤。' : idx < 0 && x.last > 0 ? '指數下跌但多數股票上漲，賣壓集中在權值股。' : ''}`;
+      }
       const v = q[d.a]?.last, u = byId[d.a]?.unit || '';
       return `${name(d.a)} ${fmtNum(v)}${u}${byId[d.a]?.note ? `（${byId[d.a].note}）` : ''}${q[d.a]?.asOf ? `（資料日 ${q[d.a].asOf}）` : ''}（前一日 ${q[d.a]?.chg == null ? '—' : sgn(q[d.a].chg, 2) + u}），${f.raw >= 0 ? '高於' : '低於'}中性值 ${d.center}${u} ${Math.abs(f.raw).toFixed(1)}${u}。${d.a === 'MARGIN' && v < 145 ? '已接近斷頭警戒區，留意被動賣壓。' : ''}`;
     },

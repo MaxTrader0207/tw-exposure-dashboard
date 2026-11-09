@@ -212,6 +212,58 @@ def yahoo(symbol, d, asof=None):
 
 # ---------- 大盤融資維持率 ----------
 
+# ---------- 籌碼與市場內部 ----------
+
+def twse_foreign_net(_symbol, d):
+    """外資現貨買賣超（億元）＝ 外資及陸資(不含外資自營商) ＋ 外資自營商。約 15:00 後公布。"""
+    j = http("GET", f"https://www.twse.com.tw/rwd/zh/fund/BFI82U?type=day&dayDate={d:%Y%m%d}&response=json").json()
+    if j.get("stat") != "OK" or j.get("date") != f"{d:%Y%m%d}":
+        return None
+    f = j.get("fields") or []
+    rows = [r for r in j.get("data", []) if r and r[0].startswith("外資")]
+    if not rows:
+        return None
+    net = sum(num(r[f.index("買賣差額")]) or 0 for r in rows) / 1e8
+    gross = sum((num(r[f.index("買進金額")]) or 0) + (num(r[f.index("賣出金額")]) or 0) for r in rows) / 1e8
+    return {"last": round(net, 2), "chg": None, "pct": None, "gross": round(gross, 2)}
+
+
+def taifex_foreign_oi(symbol, d):
+    """外資台指期多空未平倉口數淨額（口），漲跌＝與前一交易日的差。約 15:00 後公布。"""
+    r = http("POST", "https://www.taifex.com.tw/cht/3/futContractsDateDown", data={
+        "queryStartDate": f"{d - timedelta(days=14):%Y/%m/%d}", "queryEndDate": f"{d:%Y/%m/%d}", "commodityId": symbol or "TXF"})
+    rows = list(csv.reader(io.StringIO(r.content.decode("cp950", errors="replace"))))
+    if not rows or "日期" not in rows[0][0]:
+        return None
+    h = [x.strip() for x in rows[0]]
+    di, wi, ni = h.index("日期"), h.index("身份別"), h.index("多空未平倉口數淨額")
+    series = sorted((x[di].strip(), num(x[ni])) for x in rows[1:] if len(x) > ni and x[wi].strip().startswith("外資"))
+    series = [s for s in series if s[0] <= f"{d:%Y/%m/%d}" and s[1] is not None]
+    if not series or series[-1][0] != f"{d:%Y/%m/%d}":
+        return None
+    last = series[-1][1]
+    chg = last - series[-2][1] if len(series) > 1 else None
+    return {"last": last, "chg": chg, "pct": None}
+
+
+def twse_breadth(_symbol, d):
+    """上市股票漲跌家數：(上漲 − 下跌) ÷ (上漲 + 下跌) × 100，只計股票、不含 ETF 等。"""
+    for t in twse_mi_index(d, "ALLBUT0999"):
+        if (t.get("title") or "").startswith("漲跌證券數"):
+            f = t.get("fields") or []
+            col = f.index("股票") if "股票" in f else 2
+            cnt = {}
+            for r in t.get("data", []):
+                m = re.match(r"\s*([\d,]+)", str(r[col]))
+                if m:
+                    cnt[r[0][:2]] = int(m.group(1).replace(",", ""))
+            up, down = cnt.get("上漲"), cnt.get("下跌")
+            if up is None or down is None or up + down == 0:
+                return None
+            return {"last": round((up - down) / (up + down) * 100, 1), "chg": None, "pct": None, "up": up, "down": down}
+    return None
+
+
 def twse_margin_ratio(_symbol, d):
     """上市融資維持率，固定使用 d 之前最近一個交易日（證交所融資資料晚上才公布，下午抓取時當天還沒有）。"""
     for back in range(1, 10):
@@ -317,6 +369,9 @@ ADAPTERS = {
     "twse_index": twse_index,
     "taifex_fut": taifex_fut,
     "twse_margin_ratio": twse_margin_ratio,
+    "twse_foreign_net": twse_foreign_net,
+    "taifex_foreign_oi": taifex_foreign_oi,
+    "twse_breadth": twse_breadth,
     "macromicro": macromicro,
     "yahoo": yahoo,
 }
