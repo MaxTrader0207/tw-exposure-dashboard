@@ -59,3 +59,8 @@ footer{line-height:1.7}
 .disclaimer ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px;line-height:1.7}
 .ma-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
 .ma-grid .tile{background:var(--bg)}
+.hero-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stance{font-family:"Noto Sans TC",sans-serif;font-size:15px;font-weight:700;padding:3px 12px;border-radius:999px;border:1.5px solid currentColor;line-height:1.4;white-space:nowrap}
+.stance.up{color:var(--up);background:color-mix(in srgb,var(--up) 12%,transparent)}
+.stance.down{color:var(--down);background:color-mix(in srgb,var(--down) 12%,transparent)}
+.stance.neutral{color:var(--muted);background:color-mix(in srgb,var(--muted) 12%,transparent)}

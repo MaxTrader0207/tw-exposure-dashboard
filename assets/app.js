@@ -53,9 +53,12 @@
     $('warn').textContent = `注意：${missing.length ? '缺少報價 ' + missing.map((id) => name(id) + mmNote(id)).join('、') + '。' : ''}${missF.length ? '以下因子無法計算、以 0 分計：' + missF.join('、') + '。' : ''}`;
   }
   const delta = yday ? today.exposure - yday.exposure : null;
+  const stanceBadge = (t) => el('span', {class: 'stance ' + (t.tone || 'neutral')}, t.stance || t.label);
   const tile = (label, value, sub, c, hero) => el('div', {class: 'tile' + (hero ? ' hero' : '')}, el('span', {class: 'muted'}, label), el('span', {class: 'v ' + (c || '')}, value), el('span', {class: 'muted'}, sub));
   $('tiles').append(
-    tile('建議持股水位', today.exposure + '%', yday ? `較前一日 ${delta > 0 ? '+' : ''}${delta} 個百分點` : '佔可投資資金比例', '', true),
+    el('div', {class: 'tile hero'}, el('span', {class: 'muted'}, '建議持股水位'),
+      el('span', {class: 'v hero-row'}, today.exposure + '%', stanceBadge(today.tier)),
+      el('span', {class: 'muted'}, `${today.tier.label !== today.tier.stance ? today.tier.label + '｜' : ''}${yday ? `較前一日 ${delta > 0 ? '+' : ''}${delta} 個百分點${yday.tier.stance !== today.tier.stance ? `（由「${yday.tier.stance}」轉為「${today.tier.stance}」）` : ''}` : '佔可投資資金比例'}`)),
     tile('綜合分數', sgn(today.score, 1), '負值偏空、正值偏多', cls(today.score)),
     ...(today.ma.length ? [tile('均線調整', sgn(today.maPts, 0) + ' 點', `站上 ${today.ma.filter((r) => r.above).length}／${today.ma.length} 條均線`, cls(today.maPts))] : []),
     tile(name(bench), pct(q[bench]?.pct), fmtNum(q[bench]?.last), cls(q[bench]?.pct))
@@ -117,7 +120,7 @@
   /* ---------- 歷史 ---------- */
   const maNs = (model.maRules?.rules || []).map((r) => r.n);
   const maColors = ['#f59e0b', '#a78bfa', '#38bdf8'];
-  const series = history.map((d) => ({date: d.date, exposure: Engine.computeDay(d.quotes, model, ins).exposure, idx: d.quotes[bench]?.last,
+  const series = history.map((d) => ({date: d.date, ...(({exposure, tier}) => ({exposure, stance: tier.stance || tier.label}))(Engine.computeDay(d.quotes, model, ins)), idx: d.quotes[bench]?.last,
     ma: Object.fromEntries(maNs.map((n) => [n, d.quotes[bench]?.['ma' + n] ?? null]))}));
   function drawHist() {
     const box = $('histChart');
@@ -135,7 +138,7 @@
     series.forEach((d, i) => {
       const w = Math.min(28, bw * 0.7), x = L + i * bw + (bw - w) / 2;
       const r = sv('rect', {x, y: y1(d.exposure), width: w, height: y1(0) - y1(d.exposure), rx: 2, fill: 'var(--accent)', opacity: 0.55});
-      r.append(sv('title', {}, `${d.date}　水位 ${d.exposure}%　${name(bench)} ${fmtNum(d.idx)}`));
+      r.append(sv('title', {}, `${d.date}　水位 ${d.exposure}%（${d.stance}）　${name(bench)} ${fmtNum(d.idx)}`));
       svg.append(r);
     });
     const idx = series.filter((d) => d.idx != null);
@@ -297,7 +300,7 @@
     out.replaceChildren(
       el('span', {class: 'muted'}, '建議持股水位'),
       el('div', {class: 'big'}, r.exposure + '%'),
-      el('p', {}, el('b', {}, r.tier.label), '｜綜合分數 ', el('b', {class: cls(r.score)}, sgn(r.score, 1)))
+      el('p', {}, stanceBadge(r.tier), ' ', ...(r.tier.label !== r.tier.stance ? [el('b', {}, r.tier.label), '｜'] : []), '綜合分數 ', el('b', {class: cls(r.score)}, sgn(r.score, 1)))
     );
     const m = Math.max(...r.factors.map((f) => f.weight));
     const bars = el('div', {class: 'bars'});

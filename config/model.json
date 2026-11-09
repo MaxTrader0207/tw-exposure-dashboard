@@ -1,5 +1,5 @@
 {
-  "_說明": "水位模型。factors 的 type 可用：pct（a 的漲跌幅）、chg（a 的漲跌值 × mult，例如殖利率變動換成 bp）、level（a 的數值 − center）、spread（a 漲跌幅 − b 漲跌幅）、basis（(a 價 − b 價) ÷ b 價 × 100）、breadth（tag 族群 (上漲檔數 − 下跌檔數) ÷ 檔數）、rel_avg（tag 族群平均漲跌幅 − b 漲跌幅）。a、b 填商品 id，tag 填 instruments.json 的標籤。分數 = clamp(dir × 原始值 ÷ scale, −1, 1) × weight；水位 = base + slope × 綜合分數，限制在 floor 到 cap。 maRules：加權指數與自身均線比較，收盤 ≥ 均線水位直接加 above 個百分點，低於均線減 below 個百分點，每條均線分開計算。",
+  "_說明": "水位模型。factors 的 type 可用：pct（a 的漲跌幅）、chg（a 的漲跌值 × mult，例如殖利率變動換成 bp）、level（a 的數值 − center）、spread（a 漲跌幅 − b 漲跌幅）、basis（(a 價 − b 價) ÷ b 價 × 100）、breadth（tag 族群 (上漲檔數 − 下跌檔數) ÷ 檔數）、rel_avg（tag 族群平均漲跌幅 − b 漲跌幅）。a、b 填商品 id，tag 填 instruments.json 的標籤。分數 = clamp(dir × 原始值 ÷ scale, −1, 1) × weight；水位 = base + slope × 綜合分數，限制在 floor 到 cap。 maRules：加權指數與自身均線比較，收盤 ≥ 均線水位直接加 above 個百分點，低於均線減 below 個百分點，每條均線分開計算。 tiers 的 stance 是顯示在建議水位旁的簡短看法，tone 決定顏色（up 紅、down 綠、neutral 灰）。",
   "factors": [
     {
       "key": "fx",
@@ -105,27 +105,37 @@
       {
         "min": 80,
         "label": "積極加碼",
-        "advice": "匯率、權值、美股與籌碼同步偏多，可滿水位操作並以台指期多單放大曝險。"
+        "advice": "匯率、權值、美股與籌碼同步偏多，可滿水位操作並以台指期多單放大曝險。",
+        "stance": "看多",
+        "tone": "up"
       },
       {
         "min": 60,
         "label": "偏多持有",
-        "advice": "主要因子偏多，維持多數部位，拉回權值股可承接。"
+        "advice": "主要因子偏多，維持多數部位，拉回權值股可承接。",
+        "stance": "偏多",
+        "tone": "up"
       },
       {
         "min": 40,
         "label": "中性偏保守",
-        "advice": "維持核心部位、暫停追高；等扣分最多的因子轉正再加碼。"
+        "advice": "維持核心部位、暫停追高；等扣分最多的因子轉正再加碼。",
+        "stance": "中性",
+        "tone": "neutral"
       },
       {
         "min": 20,
         "label": "保守",
-        "advice": "多數因子偏空，持股降至少數核心，可用小台空單或賣權避險。"
+        "advice": "多數因子偏空，持股降至少數核心，可用小台空單或賣權避險。",
+        "stance": "保守",
+        "tone": "down"
       },
       {
         "min": -1000000000.0,
         "label": "防守",
-        "advice": "資金面、美股與權值重挫共振，以現金與避險部位為主。"
+        "advice": "資金面、美股與權值重挫共振，以現金與避險部位為主。",
+        "stance": "看空",
+        "tone": "down"
       }
     ],
     "_說明": "建議水位 = base + slope × 綜合分數 + 均線調整，限制在 floor～cap。"
