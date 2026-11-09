@@ -33,6 +33,7 @@
     $('meta').textContent = '尚無資料：等待 GitHub Actions 第一次收盤抓取。';
     return;
   }
+  const bt = await fetch('data/backtest.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const pm = await fetch('data/premarket.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const ins = cfg.instruments;
   const byId = Object.fromEntries(ins.map((i) => [i.id, i]));
@@ -390,7 +391,74 @@
     });
   }
 
-  const redraw = () => { drawFactor(); drawRel(); drawHist(); };
+  /* ---------- 回測 ---------- */
+  function drawBacktestTables() {
+    if (!bt) return;
+    $('btSection').hidden = false;
+    const [cur] = bt.strategies;
+    const same = bt.strategies.find((x) => x.name.startsWith('固定') && x.name.includes('平均水位'));
+    const better = cur.sharpe > same.sharpe;
+    $('btLede').textContent = `${bt.sample.start} ～ ${bt.sample.end}（${bt.sample.days} 個交易日）照目前規則操作：年化報酬 ${cur.cagr}%、最大回撤 ${cur.maxdd}%、夏普值 ${cur.sharpe}。` +
+      `和「固定 ${Math.round(same.avgExp)}% 不調整」（平均水位相同）相比，夏普值${better ? '較高' : '較低'}（${same.sharpe}），最大回撤 ${same.maxdd}%。` +
+      (better ? '這段期間調整水位有加分。' : '這段期間調整水位沒有比固定持股更好。');
+    $('btNote').textContent = bt.assumptions + ` 樣本只有約兩年，結果僅供參考，不保證未來。`;
+    const t = $('btTable');
+    t.append(el('tr', {}, ...['策略', '年化報酬', '年化波動', '夏普值', '最大回撤', '平均水位', '每日平均調整', '單日變動 ≥15 點'].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
+    bt.strategies.forEach((x, k) => t.append(el('tr', {class: k === 0 ? 'hl' : ''}, el('td', {}, x.name),
+      el('td', {class: 'n ' + cls(x.cagr)}, x.cagr + '%'), el('td', {class: 'n'}, x.vol + '%'), el('td', {class: 'n'}, x.sharpe),
+      el('td', {class: 'n down'}, x.maxdd + '%'), el('td', {class: 'n'}, x.avgExp + '%'), el('td', {class: 'n'}, x.avgMove + ' 點'), el('td', {class: 'n'}, x.bigMoves + ' 次'))));
+    const caps = [...new Set(bt.grid.map((g) => g.cap))], bufs = [...new Set(bt.grid.map((g) => g.buffer))];
+    const sh = bt.grid.map((g) => g.sharpe), lo = Math.min(...sh), hi = Math.max(...sh);
+    const gt = $('btGrid');
+    gt.append(el('tr', {}, el('th', {}, '每日上限 ＼ 均線緩衝'), ...bufs.map((b) => el('th', {}, b + '%'))));
+    caps.forEach((c) => gt.append(el('tr', {}, el('th', {}, c ? `±${c} 點` : '不限'), ...bufs.map((b) => {
+      const g = bt.grid.find((x) => x.cap === c && x.buffer === b);
+      const td = el('td', {title: `年化 ${g.cagr}%｜回撤 ${g.maxdd}%｜每日平均調整 ${g.avgMove} 點`}, `${g.sharpe}`, el('div', {class: 'muted'}, `${g.cagr}%／${g.maxdd}%`));
+      td.style.background = `rgba(96,165,250,${hi > lo ? ((g.sharpe - lo) / (hi - lo)) * 0.6 : 0.2})`;
+      if (c === bt.current.cap && b === bt.current.buffer) td.className = 'cur';
+      return td;
+    }))));
+    const icBy = Object.fromEntries(bt.ic.map((x) => [x.key, x]));
+    const lt = $('btLoo');
+    lt.append(el('tr', {}, ...['因子', '目前權重', '夏普值貢獻', '年化報酬貢獻', '回撤貢獻', 'IC（5 日）', 't 值'].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
+    [...bt.leaveOneOut].sort((a, b) => b.dSharpe - a.dSharpe).forEach((x) => {
+      const ic = icBy[x.key];
+      lt.append(el('tr', {}, el('td', {}, x.name), el('td', {class: 'n'}, x.weight ?? '—'),
+        el('td', {class: 'n ' + cls(x.dSharpe)}, sgn(x.dSharpe)), el('td', {class: 'n ' + cls(x.dCagr)}, sgn(x.dCagr) + '%'),
+        el('td', {class: 'n ' + cls(x.dMaxdd)}, sgn(x.dMaxdd) + '%'),
+        el('td', {class: 'n ' + cls(ic?.ic5)}, ic?.ic5 == null ? '—' : sgn(ic.ic5, 3)), el('td', {class: 'n'}, ic?.t == null ? '—' : ic.t.toFixed(2))));
+    });
+  }
+  function drawBacktestChart() {
+    if (!bt) return;
+    const box = $('btChart');
+    box.replaceChildren();
+    const {dates, series: S} = bt.equity;
+    const names = Object.keys(S);
+    const colors = ['var(--accent)', '#a78bfa', 'var(--ref)', '#f59e0b'];
+    const W = Math.max(300, box.clientWidth || 600), H = 260, L = 44, R = 12, T = 12, B = 28;
+    const all = names.flatMap((n) => S[n]);
+    const lo = Math.min(...all), hi = Math.max(...all), pad = (hi - lo) * 0.08 || 0.02;
+    const x = (i) => L + i / Math.max(1, dates.length - 1) * (W - L - R);
+    const y = (v) => T + (1 - (v - lo + pad) / (hi - lo + 2 * pad)) * (H - T - B);
+    const svg = sv('svg', {viewBox: `0 0 ${W} ${H}`});
+    box.append(svg);
+    for (let k = 0; k <= 4; k++) {
+      const v = lo - pad + (hi - lo + 2 * pad) * k / 4;
+      svg.append(sv('line', {x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--grid)'}));
+      svg.append(sv('text', {x: L - 6, y: y(v), dy: '0.35em', 'text-anchor': 'end', fill: 'var(--muted)'}, v.toFixed(2)));
+    }
+    svg.append(sv('line', {x1: L, x2: W - R, y1: y(1), y2: y(1), stroke: 'var(--ref)', 'stroke-dasharray': '4 3'}));
+    names.forEach((n, k) => svg.append(sv('polyline', {points: S[n].map((v, i) => `${x(i)},${y(v)}`).join(' '), fill: 'none', stroke: colors[k % colors.length], 'stroke-width': k === 0 ? 2.5 : 1.5, 'stroke-linejoin': 'round', opacity: k === 0 ? 1 : 0.85})));
+    const step = Math.ceil(dates.length / Math.max(1, Math.floor((W - L - R) / 80)));
+    dates.forEach((d, i) => { if (i % step === 0) svg.append(sv('text', {x: x(i), y: H - 8, 'text-anchor': 'middle', fill: 'var(--muted)'}, d.slice(2, 7))); });
+    const legend = el('div', {class: 'legend-row'});
+    names.forEach((n, k) => legend.append(el('span', {}, el('i', {style: `background:${colors[k % colors.length]}`}), `${n} ${S[n][S[n].length - 1].toFixed(3)}`)));
+    box.append(legend);
+  }
+
+  const redraw = () => { drawFactor(); drawRel(); drawHist(); drawBacktestChart(); };
+  drawBacktestTables();
   redraw(); drawPremarket(); drawMA(); drawInsights(); drawCards(); drawCorr(); fill(); runSim(); drawTables();
   let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(redraw, 150); });
 })();

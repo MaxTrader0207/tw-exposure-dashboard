@@ -78,6 +78,21 @@
     </article>
   </section>
 
+  <section class="card" id="btSection" hidden>
+    <h2>回測：這套規則有沒有用</h2>
+    <p class="bt-lede" id="btLede"></p>
+    <p class="muted" id="btNote"></p>
+    <div class="scroll"><table id="btTable"></table></div>
+    <h3>累積淨值</h3>
+    <div class="chart" id="btChart"></div>
+    <h3>平滑參數比較</h3>
+    <p class="muted">「上限」是水位每天最多變動幾個百分點，「緩衝」是均線緩衝帶。顏色越深代表夏普值越高，框起來的是目前設定。</p>
+    <div class="scroll"><table id="btGrid" class="heat"></table></div>
+    <h3>每個因子的邊際貢獻</h3>
+    <p class="muted">把該因子拿掉（權重設為 0）後績效變差多少；正值代表這個因子有幫助，負值代表拿掉反而更好。IC 是因子與未來 5 日報酬的等級相關係數，|t| &gt; 2 才算統計上顯著。</p>
+    <div class="scroll"><table id="btLoo"></table></div>
+  </section>
+
   <section class="card">
     <h2>因子明細</h2>
     <p class="muted" id="policyNote"></p>

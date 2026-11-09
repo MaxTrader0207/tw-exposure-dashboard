@@ -71,3 +71,9 @@ footer{line-height:1.7}
 .pm-note{max-width:420px}
 .pm-items{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px}
 .pm-item b{font-family:"JetBrains Mono",monospace;font-weight:600}
+.bt-lede{font-size:15px;line-height:1.7}
+tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent);font-weight:600}
+.heat td.cur{outline:2px solid var(--fg);outline-offset:-2px}
+.heat td .muted{font-size:11px}
+.legend-row{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend-row i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
