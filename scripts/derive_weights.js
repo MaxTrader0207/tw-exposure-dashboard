@@ -5,7 +5,7 @@
  * 1. 固定權重的因子（--fixed，預設台幣匯率、台積電、費城半導體 = 15）不動，其餘權重從 {0,5,10,15,20} 中挑選。
  * 2. 權重只能 ≥ 0：方向沿用設定檔的經濟意義，回測顯示反效果的因子權重歸 0，不反向使用。
  * 3. 把樣本切成 5 段連續區間。每次拿 4 段做座標下降法找使夏普值最高的權重，再到剩下那 1 段測試（樣本外）。
- * 4. 最終權重 = 5 次結果的平均，取到 5 的倍數；同時列出全樣本最佳化結果與樣本外績效供比較。
+ * 4. 最終權重 = 5 次結果的中位數（不受單一段極端結果影響）；同時列出全樣本最佳化結果與樣本外績效供比較。
  * 其他設定（基準水位、斜率、均線規則、每日變動上限、成本）與 scripts/backtest.js 相同。
  *
  * 用法：node scripts/derive_weights.js [--fixed fx,anchor,sox] [--write]
@@ -102,7 +102,8 @@ function oos(wOf) {
   folds.forEach((f) => { const rs = returns(exposures(wOf(f))); f.test.forEach((t) => { out[t] = rs[t]; }); });
   return out;
 }
-const avgW = model.factors.map((f, k) => (fixedKeys.includes(f.key) ? 15 : Math.round(folds.reduce((s, x) => s + x.weights[k], 0) / FOLDS / 5) * 5));
+const median = (xs) => { const v = [...xs].sort((a, b) => a - b), m = v.length >> 1; return v.length % 2 ? v[m] : Math.round((v[m - 1] + v[m]) / 2 / 5) * 5; };
+const avgW = model.factors.map((f, k) => (fixedKeys.includes(f.key) ? 15 : median(folds.map((x) => x.weights[k]))));
 const full = optimize(allIdx);
 const zero = model.factors.map((f) => (fixedKeys.includes(f.key) ? 15 : 0));
 const fixedE = (v) => returns(new Array(days.length).fill(v));
@@ -110,7 +111,7 @@ const fixedE = (v) => returns(new Array(days.length).fill(v));
 const cmp = [
   ['交叉驗證（每段用沒看過該段的權重）', oos((f) => f.weights)],
   ['目前權重', returns(exposures(w0))],
-  ['推導權重（5 段平均）※ 含樣本內', returns(exposures(avgW))],
+  ['推導權重（5 段中位數）※ 含樣本內', returns(exposures(avgW))],
   ['全樣本最佳化 ※ 樣本內，會高估', returns(exposures(full.w))],
   ['只留固定的 3 個因子＋均線', returns(exposures(zero))],
   ['所有每日因子歸 0（只用均線）', returns(exposures(model.factors.map(() => 0)))],
@@ -123,7 +124,7 @@ const table = model.factors.map((f, k) => ({
   folds: folds.map((x) => x.weights[k]), derived: avgW[k], fullSample: full.w[k],
 }));
 const out = {generatedAt: new Date().toISOString(), sample: {start: days[2].date, end: days[days.length - 1].date, days: nR},
-  method: '5 段連續區間交叉驗證，座標下降法在 {0,5,10,15,20} 中挑使夏普值最高的權重，權重不得為負；最終權重取 5 段平均並取到 5 的倍數。',
+  method: '5 段連續區間交叉驗證，座標下降法在 {0,5,10,15,20} 中挑使夏普值最高的權重，權重不得為負；最終權重取 5 段結果的中位數。',
   fixed: fixedKeys, folds: folds.map(({test, ...r}) => r), table, compare: cmp};
 fs.writeFileSync(path.join(ROOT, 'data/weights_derivation.json'), JSON.stringify(out, null, 1));
 console.log(`樣本 ${out.sample.start} ~ ${out.sample.end}（${nR} 天）`);
