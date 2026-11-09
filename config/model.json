@@ -17,7 +17,7 @@
       "type": "spread",
       "a": "USDTWD",
       "b": "DXY",
-      "weight": 10,
+      "weight": 20,
       "scale": 1,
       "dir": -1,
       "desc": "台匯% − 美元指數%；美元弱台幣卻貶，代表台灣特有資金外流"
@@ -27,7 +27,7 @@
       "name": "大盤動能",
       "type": "pct",
       "a": "TAIEX",
-      "weight": 10,
+      "weight": 5,
       "scale": 2,
       "dir": 1,
       "desc": "加權指數漲跌幅，±2% 計滿分"
@@ -38,7 +38,7 @@
       "type": "basis",
       "a": "TXF",
       "b": "TAIEX",
-      "weight": 10,
+      "weight": 0,
       "scale": 0.3,
       "dir": 1,
       "desc": "(台指期 − 加權指) ÷ 加權指；正價差代表期貨不比現貨悲觀"
@@ -68,7 +68,7 @@
       "name": "VIX 變動",
       "type": "pct",
       "a": "VIX",
-      "weight": 10,
+      "weight": 0,
       "scale": 15,
       "dir": -1,
       "desc": "VIX 漲跌幅；恐慌指數急升扣分，漲 15% 扣滿"
@@ -79,7 +79,7 @@
       "type": "chg",
       "a": "TNX",
       "mult": 100,
-      "weight": 10,
+      "weight": 0,
       "scale": 10,
       "dir": -1,
       "desc": "十年債殖利率變動（bp）；上升 10bp 扣滿"
@@ -89,11 +89,11 @@
       "name": "融資維持率",
       "type": "level",
       "a": "MARGIN",
-      "center": 160,
+      "center": 150,
       "weight": 10,
-      "scale": 20,
+      "scale": 25,
       "dir": 1,
-      "desc": "維持率 − 160%；低於 140% 扣滿（斷頭賣壓風險），高於 180% 加滿"
+      "desc": "維持率 − 150%（過去兩年中位數）；±25 個百分點（約兩個標準差）計滿分，低於 125% 扣滿"
     },
     {
       "key": "fini",
@@ -101,7 +101,7 @@
       "type": "level",
       "a": "FINI",
       "center": 0,
-      "weight": 10,
+      "weight": 20,
       "scale": 15,
       "dir": 1,
       "desc": "外資買賣超佔外資成交金額（買進＋賣出）的比例；過去兩年標準差約 7.5%，±15%（約兩個標準差）計滿分",
@@ -113,7 +113,7 @@
       "type": "chg",
       "a": "FOI",
       "mult": 1,
-      "weight": 10,
+      "weight": 5,
       "scale": 3000,
       "dir": 1,
       "desc": "外資台指期淨未平倉單日變化（口）；淨空單增加 3,000 口扣滿、減少 3,000 口加滿"
@@ -124,7 +124,7 @@
       "type": "level",
       "a": "ADL",
       "center": 0,
-      "weight": 10,
+      "weight": 0,
       "scale": 60,
       "dir": 1,
       "desc": "(上漲 − 下跌) ÷ (上漲 + 下跌)；−60% 以下扣滿、+60% 以上加滿"
@@ -134,21 +134,21 @@
       "name": "日韓股市",
       "type": "avg",
       "tag": "asia",
-      "weight": 10,
-      "scale": 2,
+      "weight": 0,
+      "scale": 4,
       "dir": 1,
-      "desc": "日經、韓股當天平均漲跌幅，±2% 計滿分"
+      "desc": "日經、韓股當天平均漲跌幅，±4%（約兩個標準差）計滿分"
     },
     {
       "key": "retail",
       "name": "散戶小台多空比",
       "type": "level",
       "a": "MTXR",
-      "center": 0,
-      "weight": 10,
+      "center": 12,
+      "weight": 20,
       "scale": 30,
       "dir": -1,
-      "desc": "散戶淨多單比例；反向指標，散戶越偏多扣分"
+      "desc": "散戶淨多單比例 − 12%（過去兩年中位數）；反向指標，比平常偏多 30 個百分點扣滿"
     },
     {
       "key": "pcr",
@@ -157,10 +157,10 @@
       "a": "PCR",
       "field": "dev",
       "center": 0,
-      "weight": 10,
-      "scale": 20,
+      "weight": 5,
+      "scale": 35,
       "dir": 1,
-      "desc": "未平倉 Put/Call Ratio 減前 20 日平均；賣權相對增加（支撐變強）加分"
+      "desc": "未平倉 Put/Call Ratio 減前 20 日平均；±35 個百分點（約兩個標準差）計滿分，賣權相對增加加分"
     },
     {
       "key": "vol",
@@ -169,10 +169,10 @@
       "a": "VOL",
       "field": "flow",
       "center": 0,
-      "weight": 10,
-      "scale": 30,
+      "weight": 0,
+      "scale": 40,
       "dir": 1,
-      "desc": "成交金額相對 20 日均量增減 % × 指數漲跌方向；量增價漲加分、量增價跌扣分"
+      "desc": "成交金額相對 20 日均量增減 % × 指數漲跌方向；±40%（約兩個標準差）計滿分"
     }
   ],
   "policy": {
@@ -210,7 +210,7 @@
         "tone": "down"
       },
       {
-        "min": -1000000000.0,
+        "min": -1000000000,
         "label": "防守",
         "advice": "資金面、美股與權值重挫共振，以現金與避險部位為主。",
         "stance": "看空",
@@ -241,5 +241,6 @@
       }
     ],
     "buffer": 1
-  }
+  },
+  "_權重說明": "台幣匯率、台積電、費城半導體固定 15；其餘權重由 scripts/derive_weights.js 以 2024/11～2026/11 回測推導：樣本切 5 段，每段用其餘 4 段挑使夏普值最高的權重（0/5/10/15/20，不得為負），取 5 段結果的中位數。推導細節見 data/weights_derivation.json。"
 }

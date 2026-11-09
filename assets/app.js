@@ -479,6 +479,18 @@
 
   const redraw = () => { drawFactor(); drawRel(); drawHist(); drawBacktestChart(); };
   drawBacktestTables();
+  const wd = await fetch('data/weights_derivation.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  if (wd && bt) {
+    $('wdBox').hidden = false;
+    $('wdNote').textContent = `${wd.fixed.map((k) => model.factors.find((f) => f.key === k)?.name).join('、')}固定 15。其餘因子：把 ${wd.sample.start}～${wd.sample.end} 切成 5 段，每段都用「其他 4 段」挑出夏普值最高的權重（0、5、10、15、20，不得為負），最終權重取 5 段結果的中位數。權重 0 代表回測中這個因子沒有幫助。`;
+    const t = $('wdTable');
+    t.append(el('tr', {}, ...['因子', ...wd.folds.map((f) => `第 ${f.fold} 段`), '中位數（採用）'].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
+    wd.table.forEach((r) => t.append(el('tr', {class: r.fixed ? 'muted' : ''}, el('td', {}, r.name + (r.fixed ? '（固定）' : '')),
+      ...r.folds.map((v) => el('td', {class: 'n'}, v)), el('td', {class: 'n'}, el('b', {}, r.derived)))));
+    const cv = wd.compare[0], old = wd.compare.find((x) => x.name.startsWith('目前權重')), ma = wd.compare.find((x) => x.name.includes('只用均線'));
+    $('wdCmp').textContent = `檢驗：每段都用「沒看過該段」的權重計算（樣本外），夏普值 ${cv.sharpe}；推導前的權重 ${old.sharpe}、只用均線 ${ma.sharpe}。` +
+      (cv.sharpe > old.sharpe ? '推導後比原本主觀權重好一些，' : '推導後沒有比原本主觀權重好，') + (cv.sharpe < ma.sharpe ? '但仍不如只用均線，且差距在兩年樣本下不具統計顯著性。' : '差距在兩年樣本下不具統計顯著性。');
+  }
   redraw(); drawPremarket(); drawMA(); drawInsights(); drawCards(); drawCorr(); fill(); runSim(); drawTables();
   let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(redraw, 150); });
 })();

@@ -1,0 +1,422 @@
+{
+ "generatedAt": "2026-11-09T09:18:51.518Z",
+ "sample": {
+  "start": "2024-11-18",
+  "end": "2026-11-06",
+  "days": 478
+ },
+ "method": "5 段連續區間交叉驗證，座標下降法在 {0,5,10,15,20} 中挑使夏普值最高的權重，權重不得為負；最終權重取 5 段結果的中位數。",
+ "fixed": [
+  "fx",
+  "anchor",
+  "sox"
+ ],
+ "folds": [
+  {
+   "fold": 1,
+   "from": "2024-11-18",
+   "to": "2025-04-14",
+   "weights": [
+    15,
+    20,
+    0,
+    0,
+    15,
+    15,
+    0,
+    0,
+    0,
+    20,
+    0,
+    0,
+    0,
+    20,
+    5,
+    0
+   ],
+   "trainSharpe": 2.22
+  },
+  {
+   "fold": 2,
+   "from": "2025-04-15",
+   "to": "2025-08-28",
+   "weights": [
+    15,
+    20,
+    15,
+    0,
+    15,
+    15,
+    0,
+    0,
+    20,
+    20,
+    5,
+    0,
+    0,
+    20,
+    5,
+    0
+   ],
+   "trainSharpe": 1.32
+  },
+  {
+   "fold": 3,
+   "from": "2025-08-29",
+   "to": "2026-01-16",
+   "weights": [
+    15,
+    20,
+    0,
+    0,
+    15,
+    15,
+    0,
+    0,
+    10,
+    20,
+    0,
+    0,
+    0,
+    20,
+    5,
+    0
+   ],
+   "trainSharpe": 1.04
+  },
+  {
+   "fold": 4,
+   "from": "2026-01-19",
+   "to": "2026-06-16",
+   "weights": [
+    15,
+    20,
+    20,
+    0,
+    15,
+    15,
+    0,
+    0,
+    0,
+    20,
+    15,
+    10,
+    0,
+    20,
+    10,
+    0
+   ],
+   "trainSharpe": 0.81
+  },
+  {
+   "fold": 5,
+   "from": "2026-06-17",
+   "to": "2026-11-06",
+   "weights": [
+    15,
+    0,
+    5,
+    0,
+    15,
+    15,
+    5,
+    0,
+    15,
+    20,
+    15,
+    5,
+    10,
+    20,
+    5,
+    5
+   ],
+   "trainSharpe": 2.28
+  }
+ ],
+ "table": [
+  {
+   "key": "fx",
+   "name": "台幣匯率",
+   "fixed": true,
+   "now": 15,
+   "folds": [
+    15,
+    15,
+    15,
+    15,
+    15
+   ],
+   "derived": 15,
+   "fullSample": 15
+  },
+  {
+   "key": "fxdiv",
+   "name": "台幣相對美元",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    20,
+    20,
+    20,
+    20,
+    0
+   ],
+   "derived": 20,
+   "fullSample": 10
+  },
+  {
+   "key": "trend",
+   "name": "大盤動能",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    0,
+    15,
+    0,
+    20,
+    5
+   ],
+   "derived": 5,
+   "fullSample": 20
+  },
+  {
+   "key": "basis",
+   "name": "期現價差",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "derived": 0,
+   "fullSample": 0
+  },
+  {
+   "key": "anchor",
+   "name": "台積電",
+   "fixed": true,
+   "now": 15,
+   "folds": [
+    15,
+    15,
+    15,
+    15,
+    15
+   ],
+   "derived": 15,
+   "fullSample": 15
+  },
+  {
+   "key": "sox",
+   "name": "費城半導體",
+   "fixed": true,
+   "now": 15,
+   "folds": [
+    15,
+    15,
+    15,
+    15,
+    15
+   ],
+   "derived": 15,
+   "fullSample": 15
+  },
+  {
+   "key": "vix",
+   "name": "VIX 變動",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    0,
+    0,
+    0,
+    0,
+    5
+   ],
+   "derived": 0,
+   "fullSample": 0
+  },
+  {
+   "key": "tnx",
+   "name": "美債殖利率變動",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "derived": 0,
+   "fullSample": 0
+  },
+  {
+   "key": "margin",
+   "name": "融資維持率",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    0,
+    20,
+    10,
+    0,
+    15
+   ],
+   "derived": 10,
+   "fullSample": 0
+  },
+  {
+   "key": "fini",
+   "name": "外資現貨買賣超",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "derived": 20,
+   "fullSample": 20
+  },
+  {
+   "key": "foi",
+   "name": "外資期貨空單增減",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    0,
+    5,
+    0,
+    15,
+    15
+   ],
+   "derived": 5,
+   "fullSample": 10
+  },
+  {
+   "key": "adl",
+   "name": "市場廣度",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    0,
+    0,
+    0,
+    10,
+    5
+   ],
+   "derived": 0,
+   "fullSample": 0
+  },
+  {
+   "key": "asia",
+   "name": "日韓股市",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    0,
+    0,
+    0,
+    0,
+    10
+   ],
+   "derived": 0,
+   "fullSample": 20
+  },
+  {
+   "key": "retail",
+   "name": "散戶小台多空比",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "derived": 20,
+   "fullSample": 20
+  },
+  {
+   "key": "pcr",
+   "name": "P/C Ratio 變化",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    5,
+    5,
+    5,
+    10,
+    5
+   ],
+   "derived": 5,
+   "fullSample": 0
+  },
+  {
+   "key": "vol",
+   "name": "量價配合",
+   "fixed": false,
+   "now": 10,
+   "folds": [
+    0,
+    0,
+    0,
+    0,
+    5
+   ],
+   "derived": 0,
+   "fullSample": 0
+  }
+ ],
+ "compare": [
+  {
+   "name": "交叉驗證（每段用沒看過該段的權重）",
+   "sharpe": 1.35,
+   "cagr": 22.17,
+   "maxdd": -13.09
+  },
+  {
+   "name": "目前權重",
+   "sharpe": 1.28,
+   "cagr": 21.28,
+   "maxdd": -12.61
+  },
+  {
+   "name": "推導權重（5 段中位數）※ 含樣本內",
+   "sharpe": 1.51,
+   "cagr": 25.12,
+   "maxdd": -12.12
+  },
+  {
+   "name": "全樣本最佳化 ※ 樣本內，會高估",
+   "sharpe": 1.5,
+   "cagr": 24.94,
+   "maxdd": -11.54
+  },
+  {
+   "name": "只留固定的 3 個因子＋均線",
+   "sharpe": 1.37,
+   "cagr": 23.85,
+   "maxdd": -14.99
+  },
+  {
+   "name": "所有每日因子歸 0（只用均線）",
+   "sharpe": 1.39,
+   "cagr": 24.52,
+   "maxdd": -14.83
+  },
+  {
+   "name": "固定 69%",
+   "sharpe": 1.21,
+   "cagr": 22.73,
+   "maxdd": -19.33
+  }
+ ]
+}
