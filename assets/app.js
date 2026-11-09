@@ -246,7 +246,7 @@
         return `上漲 ${fmtNum(x.up)} 家、下跌 ${fmtNum(x.down)} 家，廣度 ${sgn(x.last, 1)}%。${idx > 0 && x.last < 0 ? '指數上漲但多數股票下跌，屬權值股撐盤。' : idx < 0 && x.last > 0 ? '指數下跌但多數股票上漲，賣壓集中在權值股。' : ''}`;
       }
       const v = q[d.a]?.last, u = byId[d.a]?.unit || '';
-      return `${name(d.a)} ${fmtNum(v)}${u}${byId[d.a]?.note ? `（${byId[d.a].note}）` : ''}${q[d.a]?.asOf ? `（資料日 ${q[d.a].asOf}）` : ''}（前一日 ${q[d.a]?.chg == null ? '—' : sgn(q[d.a].chg, 2) + u}），${f.raw >= 0 ? '高於' : '低於'}中性值 ${d.center}${u} ${Math.abs(f.raw).toFixed(1)}${u}。${d.a === 'MARGIN' && v < 145 ? '已接近斷頭警戒區，留意被動賣壓。' : ''}`;
+      return `${name(d.a)} ${fmtNum(v)}${u}${byId[d.a]?.note ? `（${byId[d.a].note}）` : ''}${q[d.a]?.asOf ? `（資料日 ${q[d.a].asOf}）` : ''}（前一日 ${q[d.a]?.chg == null ? '—' : sgn(q[d.a].chg, 2) + u}），${f.raw >= 0 ? '高於' : '低於'}中性值 ${d.center}${u} ${Math.abs(f.raw).toFixed(1)}${u}。${d.a === 'MARGIN' && v < 140 ? '已接近斷頭警戒區，留意被動賣壓。' : ''}`;
     },
     spread: (f, d) => {
       const a = q[d.a]?.pct, b = q[d.b]?.pct;

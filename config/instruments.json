@@ -1,5 +1,5 @@
 {
-  "_說明": "商品清單。新增、刪除、替換商品只要改這個檔案。source.type 可用：twse_stock（上市股）、tpex_stock（上櫃股）、twse_index（證交所指數，symbol 為指數中文全名）、taifex_fut（期交所期貨，symbol 為商品代號如 TX、MTX、TE）、twse_margin_ratio（自行計算的上市融資維持率，不需 symbol）、twse_foreign_net（外資現貨買賣超）、taifex_foreign_oi（外資期貨淨未平倉，symbol 為期交所商品如 TXF）、twse_breadth（上市漲跌家數）、taifex_retail_mtx（散戶小台多空比）、taifex_pcr（台指選擇權未平倉 Put/Call Ratio）、twse_turnover（上市成交金額）、macromicro（財經M平方圖表，symbol 為圖表編號；網站有機器人驗證，連不上時該商品視為缺值，相關因子影響為 0）、yahoo（Yahoo Finance 代號，如 DX-Y.NYB、TWD=X、^SOX、^VIX、^TNX；可加 asof: \"14:00\" 表示取台北時間該時刻的小時線價格，用於 24 小時交易的匯率）。海外市場（收盤晚於台股）一律使用前一個已收盤交易日；收盤早於 16:00 的亞洲市場加 sameDay: true 使用當天收盤。ma：要計算的均線天數（需搭配 historySymbol 指定 Yahoo 歷史代號，例如 ^TWII）。note：顯示在頁面上的資料說明。tags：fx（匯率）、us（美股隔夜）、chip（籌碼）、asia（日韓股，同時段）、macro（非價格指標，不列入「相對大盤」比較）。",
+  "_說明": "商品清單。新增、刪除、替換商品只要改這個檔案。source.type 可用：twse_stock（上市股）、tpex_stock（上櫃股）、twse_index（證交所指數，symbol 為指數中文全名）、taifex_fut（期交所期貨，symbol 為商品代號如 TX、MTX、TE）、twse_margin_ratio（自行計算的上市融資維持率，不需 symbol；calib 為校正倍數）、twse_foreign_net（外資現貨買賣超）、taifex_foreign_oi（外資期貨淨未平倉，symbol 為期交所商品如 TXF）、twse_breadth（上市漲跌家數）、taifex_retail_mtx（散戶小台多空比）、taifex_pcr（台指選擇權未平倉 Put/Call Ratio）、twse_turnover（上市成交金額）、macromicro（財經M平方圖表，symbol 為圖表編號；網站有機器人驗證，連不上時該商品視為缺值，相關因子影響為 0）、yahoo（Yahoo Finance 代號，如 DX-Y.NYB、TWD=X、^SOX、^VIX、^TNX；可加 asof: \"14:00\" 表示取台北時間該時刻的小時線價格，用於 24 小時交易的匯率）。海外市場（收盤晚於台股）一律使用前一個已收盤交易日；收盤早於 16:00 的亞洲市場加 sameDay: true 使用當天收盤。ma：要計算的均線天數（需搭配 historySymbol 指定 Yahoo 歷史代號，例如 ^TWII）。note：顯示在頁面上的資料說明。tags：fx（匯率）、us（美股隔夜）、chip（籌碼）、asia（日韓股，同時段）、macro（非價格指標，不列入「相對大盤」比較）。",
   "benchmark": "TAIEX",
   "instruments": [
     {
@@ -162,14 +162,15 @@
       "name": "大盤融資維持率",
       "group": "籌碼",
       "source": {
-        "type": "twse_margin_ratio"
+        "type": "twse_margin_ratio",
+        "calib": 0.901
       },
       "tags": [
         "chip",
         "macro"
       ],
       "unit": "%",
-      "note": "自行計算（上市個股融資餘額 × 收盤價 ÷ 融資金額，分子不含 ETF，與財經M平方定義相同），使用前一交易日數值；財經M平方已於 2026 年 7 月停更，數值可能略有差異",
+      "note": "自行計算（上市個股融資餘額 × 收盤價 ÷ 融資金額，分子不含 ETF），乘上校正倍數 0.901 對齊財經M平方與玩股網公布值（2026/6～7 月比對，誤差約 ±1 個百分點）；使用前一交易日數值。財經M平方已於 2026/7/29 停更",
       "role": "低於 140% 附近容易出現斷頭賣壓"
     },
     {

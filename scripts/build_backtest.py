@@ -211,6 +211,7 @@ def main():
         return fetch.quote(cur[-1], cur[-1] - prev[-1]) if cur and prev else None
 
     out, last_margin = [], None
+    calib = next(i["source"].get("calib", 1.0) for i in cfg["instruments"] if i["source"]["type"] == "twse_margin_ratio")
     margin_days = sorted(k for k, v in cache.items() if v.get("margin2"))
     for d in cal:
         q = {}
@@ -242,7 +243,7 @@ def main():
             q["FOI"] = foi[str(d)]
         pm = [k for k in margin_days if k < str(d)]
         if pm:
-            v = cache[pm[-1]]["margin2"]
+            v = round(cache[pm[-1]]["margin2"] * calib, 2)
             q["MARGIN"] = {"last": v, "chg": None if last_margin is None else round(v - last_margin, 2), "pct": None, "asOf": pm[-1]}
             last_margin = v
         for k in ("N225", "KS11"):

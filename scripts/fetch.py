@@ -283,14 +283,17 @@ def twse_breadth(_symbol, d):
     return None
 
 
-def twse_margin_ratio(_symbol, d):
-    """上市融資維持率，固定使用 d 之前最近一個交易日（證交所融資資料晚上才公布，下午抓取時當天還沒有）。"""
+def twse_margin_ratio(_symbol, d, calib=1.0):
+    """上市融資維持率，固定使用 d 之前最近一個交易日（證交所融資資料晚上才公布，下午抓取時當天還沒有）。
+    calib：校正倍數，讓自算值對齊財經M平方／玩股網公布的數值（raw 欄位保留校正前數值）。"""
     for back in range(1, 10):
         day = d - timedelta(days=back)
         if day.weekday() >= 5:
             continue
         q = margin_ratio_on(day)
         if q:
+            q["raw"] = q["last"]
+            q["last"] = round(q["last"] * calib, 2)
             q["asOf"] = str(day)
             return q
     return None
@@ -437,7 +440,8 @@ def with_dev(series, d, n=20):
 
 def taifex_pcr(_symbol, d):
     """台指選擇權未平倉 Put/Call Ratio（%）。dev ＝ 當天 − 前 20 個交易日平均：賣權未平倉相對增加，代表支撐變強。"""
-    last, dev = with_dev(pcr_rows(d - timedelta(days=45), d), d)
+    rows = {**pcr_rows(d - timedelta(days=60), d - timedelta(days=31)), **pcr_rows(d - timedelta(days=30), d)}  # 期交所一次最多查一個月
+    last, dev = with_dev(rows, d)
     if last is None:
         return None
     return {"last": last, "chg": None, "pct": None, "dev": round(dev, 2)}
@@ -593,7 +597,7 @@ def premarket(cfg, d):
                 if q:
                     q["session"] = "夜盤"
             elif src["type"] == "twse_margin_ratio":
-                q = twse_margin_ratio(src.get("symbol"), d)
+                q = twse_margin_ratio(src.get("symbol"), d, calib=src.get("calib", 1.0))
                 prev = base["quotes"].get(k, {}).get("last")
                 if q and prev:
                     q["chg"] = round(q["last"] - prev, 4)
