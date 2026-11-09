@@ -399,8 +399,11 @@
     const same = bt.strategies.find((x) => x.name.startsWith('固定') && x.name.includes('平均水位'));
     const better = cur.sharpe > same.sharpe;
     $('btLede').textContent = `${bt.sample.start} ～ ${bt.sample.end}（${bt.sample.days} 個交易日）照目前規則操作：年化報酬 ${cur.cagr}%、最大回撤 ${cur.maxdd}%、夏普值 ${cur.sharpe}。` +
-      `和「固定 ${Math.round(same.avgExp)}% 不調整」（平均水位相同）相比，夏普值${better ? '較高' : '較低'}（${same.sharpe}），最大回撤 ${same.maxdd}%。` +
-      (better ? '這段期間調整水位有加分。' : '這段期間調整水位沒有比固定持股更好。');
+      `「固定 ${Math.round(same.avgExp)}% 不調整」（平均水位相同）的夏普值 ${same.sharpe}、最大回撤 ${same.maxdd}%，目前規則${better ? '略好' : '沒有比較好'}。`;
+    const fo = bt.strategies.find((x) => x.name.startsWith('只用因子'));
+    const mo = bt.strategies.find((x) => x.name.startsWith('只用均線'));
+    if (fo && mo) $('btLede').textContent += `拆開來看，「只用均線規則」夏普值 ${mo.sharpe}、「只用因子」${fo.sharpe}，` +
+      (fo.sharpe < same.sharpe ? '加分主要來自均線規則，每日因子本身沒有勝過固定持股。' : '均線與因子都有貢獻。');
     $('btNote').textContent = bt.assumptions + ` 樣本只有約兩年，結果僅供參考，不保證未來。`;
     const t = $('btTable');
     t.append(el('tr', {}, ...['策略', '年化報酬', '年化波動', '夏普值', '最大回撤', '平均水位', '每日平均調整', '單日變動 ≥15 點'].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
