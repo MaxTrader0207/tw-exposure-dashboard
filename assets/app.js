@@ -34,6 +34,7 @@
     return;
   }
   const bt = await fetch('data/backtest.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const health = await fetch('data/health.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const pm = await fetch('data/premarket.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const ins = cfg.instruments;
   const byId = Object.fromEntries(ins.map((i) => [i.id, i]));
@@ -57,6 +58,10 @@
     $('warn').hidden = false;
     const mmNote = (id) => (byId[id]?.source.type === 'macromicro' ? '（財經M平方無法連線，影響設為 0）' : '');
     $('warn').textContent = `注意：${missing.length ? '缺少報價 ' + missing.map((id) => name(id) + mmNote(id)).join('、') + '。' : ''}${missF.length ? '以下因子無法計算、以 0 分計：' + missF.join('、') + '。' : ''}`;
+  }
+  if (health?.problems?.length) {
+    $('warn').hidden = false;
+    $('warn').append(el('div', {}, `資料異常：${health.problems.map((p) => `${p.name} 已連續 ${p.days} 個交易日抓不到`).join('、')}，相關因子以 0 分計，可能是資料來源改版，已自動通知維護者。`));
   }
   const delta = yday ? today.exposure - yday.exposure : null;
   const stanceBadge = (t) => el('span', {class: 'stance ' + (t.tone || 'neutral')}, t.stance || t.label);
@@ -225,6 +230,17 @@
         const v = q[d.a]?.last;
         return `外資${v >= 0 ? '買超' : '賣超'} ${fmtNum(Math.abs(v))} 億元${q[d.a]?.gross ? `，約佔外資成交 ${(Math.abs(v) / q[d.a].gross * 100).toFixed(1)}%` : ''}。`;
       }
+      const x0 = q[d.a] || {};
+      if (x0.instNet != null) {
+        return `散戶小台${x0.last >= 0 ? '淨多單' : '淨空單'}佔未平倉 ${Math.abs(x0.last).toFixed(1)}%（三大法人淨${x0.instNet >= 0 ? '多' : '空'} ${fmtNum(Math.abs(x0.instNet))} 口，全市場未平倉 ${fmtNum(x0.oi)} 口）。${x0.last >= 30 ? '散戶明顯偏多，籌碼面偏空。' : x0.last <= -30 ? '散戶明顯偏空，常見於低檔。' : ''}`;
+      }
+      if (x0.dev != null) {
+        return `未平倉 P/C Ratio ${fmtNum(x0.last)}%，${f.raw >= 0 ? '高於' : '低於'}前 20 日平均 ${Math.abs(f.raw).toFixed(1)} 個百分點，${f.raw >= 0 ? '賣權相對增加，下方支撐變強' : '賣權相對減少，支撐轉弱'}。`;
+      }
+      if (x0.flow != null) {
+        const ip = q[bench]?.pct;
+        return `上市成交 ${fmtNum(x0.last)} 億元，較 20 日均量${x0.ratio >= 0 ? '增加' : '減少'} ${Math.abs(x0.ratio).toFixed(0)}%，指數${ip > 0 ? '上漲' : ip < 0 ? '下跌' : '平盤'}：${x0.ratio >= 0 ? (ip > 0 ? '量增價漲，追價資金進場。' : ip < 0 ? '量增價跌，賣壓湧現。' : '量增但指數持平。') : (ip > 0 ? '量縮上漲，追價意願有限。' : ip < 0 ? '量縮下跌，賣壓不算重。' : '量縮整理。')}`;
+      }
       if (q[d.a]?.up != null) {
         const x = q[d.a], idx = q[bench]?.pct;
         return `上漲 ${fmtNum(x.up)} 家、下跌 ${fmtNum(x.down)} 家，廣度 ${sgn(x.last, 1)}%。${idx > 0 && x.last < 0 ? '指數上漲但多數股票下跌，屬權值股撐盤。' : idx < 0 && x.last > 0 ? '指數下跌但多數股票上漲，賣壓集中在權值股。' : ''}`;
@@ -250,6 +266,7 @@
       const up = xs.filter((id) => q[id].pct > 0), dn = xs.filter((id) => q[id].pct < 0);
       return `${tagNames(d.tag).join('、')} 中上漲 ${up.length} 檔、下跌 ${dn.length} 檔${up.length && up.length <= 2 ? `（逆勢：${up.map(name).join('、')}）` : ''}。`;
     },
+    avg: (f, d) => `${Engine.members(ins, d.tag).filter((id) => q[id]).map((id) => `${name(id)} ${pct(q[id].pct)}`).join('、')}，平均 ${pct(f.raw)}（當天收盤）。`,
     rel_avg: (f, d) => {
       const xs = Engine.members(ins, d.tag).filter((id) => q[id]).sort((a, b) => q[a].pct - q[b].pct);
       return `族群相對 ${name(d.b)} ${sgn(f.raw)} 個百分點；最弱 ${name(xs[0])} ${pct(q[xs[0]]?.pct)}，最強 ${name(xs[xs.length - 1])} ${pct(q[xs[xs.length - 1]]?.pct)}。`;
@@ -325,11 +342,11 @@
     if (f.type === 'chg') add(f.a, f.field || 'chg');
     if (f.type === 'level') add(f.a, f.field || 'last');
     if (f.type === 'basis') { add(f.a, 'last'); add(f.b, 'last'); }
-    if (['breadth', 'rel_avg'].includes(f.type)) { Engine.members(ins, f.tag).forEach((id) => add(id, 'pct')); add(f.b, 'pct'); }
+    if (['breadth', 'rel_avg', 'avg'].includes(f.type)) { Engine.members(ins, f.tag).forEach((id) => add(id, 'pct')); add(f.b, 'pct'); }
   });
-  const colLabel = {last: (i) => `${i.name}${i.unit ? '（' + i.unit + '）' : ' 數值'}`, pct: (i) => `${i.name} 漲跌 %`, chg: (i) => `${i.name} 漲跌`, ratio: (i) => `${i.name}（佔成交 %）`};
+  const colLabel = {last: (i) => `${i.name}${i.unit ? '（' + i.unit + '）' : ' 數值'}`, pct: (i) => `${i.name} 漲跌 %`, chg: (i) => `${i.name} 漲跌`, ratio: (i) => (i.id === 'VOL' ? `${i.name} 相對均量 %` : `${i.name}（佔成交 %）`), dev: (i) => `${i.name} 相對 20 日均 %`, flow: (i) => `${i.name} 量價（量增減 % × 漲跌方向）`};
   const fields = [];
-  ins.forEach((i) => ['last', 'ratio', 'pct', 'chg'].forEach((c) => { if (need[i.id]?.has(c)) fields.push({id: i.id, col: c, label: colLabel[c](i)}); }));
+  ins.forEach((i) => ['last', 'ratio', 'dev', 'flow', 'pct', 'chg'].forEach((c) => { if (need[i.id]?.has(c)) fields.push({id: i.id, col: c, label: colLabel[c](i)}); }));
   const inputs = fields.map((f) => {
     const input = el('input', {type: 'number', step: 'any', inputmode: 'decimal'});
     input.dataset.id = f.id; input.dataset.col = f.col;

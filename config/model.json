@@ -1,5 +1,5 @@
 {
-  "_說明": "水位模型。factors 的 type 可用：pct（a 的漲跌幅）、chg（a 的漲跌值 × mult，例如殖利率變動換成 bp）、level（a 的數值 − center；可用 field 指定欄位，例如 ratio）、spread（a 漲跌幅 − b 漲跌幅）、basis（(a 價 − b 價) ÷ b 價 × 100）、breadth（tag 族群 (上漲檔數 − 下跌檔數) ÷ 檔數）、rel_avg（tag 族群平均漲跌幅 − b 漲跌幅）。a、b 填商品 id，tag 填 instruments.json 的標籤。分數 = clamp(dir × 原始值 ÷ scale, −1, 1) × weight；水位 = base + slope × 綜合分數，限制在 floor 到 cap。 maRules：加權指數與自身均線比較，收盤 ≥ 均線水位直接加 above 個百分點，低於均線減 below 個百分點，每條均線分開計算。 tiers 的 stance 是顯示在建議水位旁的簡短看法，tone 決定顏色（up 紅、down 綠、neutral 灰）。",
+  "_說明": "水位模型。factors 的 type 可用：pct（a 的漲跌幅）、chg（a 的漲跌值 × mult，例如殖利率變動換成 bp）、level（a 的數值 − center；可用 field 指定欄位，例如 ratio）、spread（a 漲跌幅 − b 漲跌幅）、basis（(a 價 − b 價) ÷ b 價 × 100）、breadth（tag 族群 (上漲檔數 − 下跌檔數) ÷ 檔數）、rel_avg（tag 族群平均漲跌幅 − b 漲跌幅）、avg（tag 族群平均漲跌幅）。a、b 填商品 id，tag 填 instruments.json 的標籤。分數 = clamp(dir × 原始值 ÷ scale, −1, 1) × weight；水位 = base + slope × 綜合分數，限制在 floor 到 cap。 maRules：加權指數與自身均線比較，收盤 ≥ 均線水位直接加 above 個百分點，低於均線減 below 個百分點，每條均線分開計算。 tiers 的 stance 是顯示在建議水位旁的簡短看法，tone 決定顏色（up 紅、down 綠、neutral 灰）。",
   "factors": [
     {
       "key": "fx",
@@ -128,6 +128,51 @@
       "scale": 60,
       "dir": 1,
       "desc": "(上漲 − 下跌) ÷ (上漲 + 下跌)；−60% 以下扣滿、+60% 以上加滿"
+    },
+    {
+      "key": "asia",
+      "name": "日韓股市",
+      "type": "avg",
+      "tag": "asia",
+      "weight": 10,
+      "scale": 2,
+      "dir": 1,
+      "desc": "日經、韓股當天平均漲跌幅，±2% 計滿分"
+    },
+    {
+      "key": "retail",
+      "name": "散戶小台多空比",
+      "type": "level",
+      "a": "MTXR",
+      "center": 0,
+      "weight": 10,
+      "scale": 30,
+      "dir": -1,
+      "desc": "散戶淨多單比例；反向指標，散戶越偏多扣分"
+    },
+    {
+      "key": "pcr",
+      "name": "P/C Ratio 變化",
+      "type": "level",
+      "a": "PCR",
+      "field": "dev",
+      "center": 0,
+      "weight": 10,
+      "scale": 20,
+      "dir": 1,
+      "desc": "未平倉 Put/Call Ratio 減前 20 日平均；賣權相對增加（支撐變強）加分"
+    },
+    {
+      "key": "vol",
+      "name": "量價配合",
+      "type": "level",
+      "a": "VOL",
+      "field": "flow",
+      "center": 0,
+      "weight": 10,
+      "scale": 30,
+      "dir": 1,
+      "desc": "成交金額相對 20 日均量增減 % × 指數漲跌方向；量增價漲加分、量增價跌扣分"
     }
   ],
   "policy": {

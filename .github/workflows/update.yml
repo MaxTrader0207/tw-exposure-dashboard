@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: update-data
@@ -47,6 +48,26 @@ jobs:
             python scripts/fetch.py --premarket ${{ inputs.date && format('--date {0}', inputs.date) || '' }}
           else
             python scripts/fetch.py --backfill "${{ inputs.backfill || '0' }}" ${{ inputs.date && format('--date {0}', inputs.date) || '' }}
+          fi
+      - name: 資料健康檢查（連續 2 個交易日缺資料就開 Issue 通知）
+        id: health
+        if: env.MODE != 'premarket'
+        run: python scripts/check_health.py --days 2
+      - name: 開立或關閉異常通知
+        if: env.MODE != 'premarket'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create data-alert --color d73a4a --description "資料來源異常" 2>/dev/null || true
+          open=$(gh issue list --label data-alert --state open --json number --jq '.[0].number')
+          if [ "${{ steps.health.outputs.problems }}" != "0" ]; then
+            if [ -z "$open" ]; then
+              gh issue create --title "資料異常：部分商品連續抓不到資料" --label data-alert --body-file health_issue.md
+            else
+              gh issue edit "$open" --body-file health_issue.md  # 已有通知就只更新內容，不重複寄信
+            fi
+          elif [ -n "$open" ]; then
+            gh issue close "$open" --comment "$(TZ=Asia/Taipei date +%F) 所有商品資料已恢復正常。"
           fi
       - name: 提交資料
         run: |

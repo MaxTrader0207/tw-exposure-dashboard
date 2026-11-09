@@ -1,18 +1,248 @@
 {
-  "_說明": "商品清單。新增、刪除、替換商品只要改這個檔案。source.type 可用：twse_stock（上市股）、tpex_stock（上櫃股）、twse_index（證交所指數，symbol 為指數中文全名）、taifex_fut（期交所期貨，symbol 為商品代號如 TX、MTX、TE）、twse_margin_ratio（自行計算的上市融資維持率，不需 symbol）、twse_foreign_net（外資現貨買賣超）、taifex_foreign_oi（外資期貨淨未平倉，symbol 為期交所商品如 TXF）、twse_breadth（上市漲跌家數）、macromicro（財經M平方圖表，symbol 為圖表編號；網站有機器人驗證，連不上時該商品視為缺值，相關因子影響為 0）、yahoo（Yahoo Finance 代號，如 DX-Y.NYB、TWD=X、^SOX、^VIX、^TNX；可加 asof: \"14:00\" 表示取台北時間該時刻的小時線價格，用於 24 小時交易的匯率）。海外市場（收盤晚於台股）一律使用前一個已收盤交易日。ma：要計算的均線天數（需搭配 historySymbol 指定 Yahoo 歷史代號，例如 ^TWII）。note：顯示在頁面上的資料說明。tags：fx（匯率）、us（美股隔夜）、chip（籌碼）、macro（非價格指標，不列入「相對大盤」比較）。",
+  "_說明": "商品清單。新增、刪除、替換商品只要改這個檔案。source.type 可用：twse_stock（上市股）、tpex_stock（上櫃股）、twse_index（證交所指數，symbol 為指數中文全名）、taifex_fut（期交所期貨，symbol 為商品代號如 TX、MTX、TE）、twse_margin_ratio（自行計算的上市融資維持率，不需 symbol）、twse_foreign_net（外資現貨買賣超）、taifex_foreign_oi（外資期貨淨未平倉，symbol 為期交所商品如 TXF）、twse_breadth（上市漲跌家數）、taifex_retail_mtx（散戶小台多空比）、taifex_pcr（台指選擇權未平倉 Put/Call Ratio）、twse_turnover（上市成交金額）、macromicro（財經M平方圖表，symbol 為圖表編號；網站有機器人驗證，連不上時該商品視為缺值，相關因子影響為 0）、yahoo（Yahoo Finance 代號，如 DX-Y.NYB、TWD=X、^SOX、^VIX、^TNX；可加 asof: \"14:00\" 表示取台北時間該時刻的小時線價格，用於 24 小時交易的匯率）。海外市場（收盤晚於台股）一律使用前一個已收盤交易日；收盤早於 16:00 的亞洲市場加 sameDay: true 使用當天收盤。ma：要計算的均線天數（需搭配 historySymbol 指定 Yahoo 歷史代號，例如 ^TWII）。note：顯示在頁面上的資料說明。tags：fx（匯率）、us（美股隔夜）、chip（籌碼）、asia（日韓股，同時段）、macro（非價格指標，不列入「相對大盤」比較）。",
   "benchmark": "TAIEX",
   "instruments": [
-    {"id": "DXY", "name": "美元指數", "group": "匯率", "source": {"type": "yahoo", "symbol": "DX-Y.NYB", "asof": "14:00"}, "tags": ["fx"], "role": "全球美元強弱；美元走弱時台幣通常升值"},
-    {"id": "USDTWD", "name": "台匯（美元/台幣）", "group": "匯率", "source": {"type": "yahoo", "symbol": "TWD=X", "asof": "14:00"}, "tags": ["fx"], "role": "數值上升＝台幣貶值，多與外資匯出同步"},
-    {"id": "TXF", "name": "台指期近月", "group": "期貨", "source": {"type": "taifex_fut", "symbol": "TX"}, "tags": [], "role": "台指期近月一般盤收盤（16:00 抓取時夜盤尚未開始，近全＝一般盤）"},
-    {"id": "TAIEX", "name": "加權指數", "group": "大盤", "source": {"type": "twse_index", "symbol": "發行量加權股價指數"}, "ma": [30, 60, 100], "historySymbol": "^TWII", "tags": [], "role": "現貨大盤，水位決策的基準"},
-    {"id": "2330", "name": "台積電", "group": "權值", "source": {"type": "twse_stock", "symbol": "2330"}, "tags": ["anchor"], "role": "最大權值股，外資進出首要標的"},
-    {"id": "VIX", "name": "VIX 指數", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^VIX"}, "tags": ["us", "macro"], "role": "美股恐慌指數，前一個美股交易日收盤；急升代表全球避險情緒升溫"},
-    {"id": "SOX", "name": "費城半導體指數", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^SOX"}, "tags": ["us"], "role": "前一個美股交易日收盤，台灣半導體權值股的領先指標"},
-    {"id": "TNX", "name": "美國十年債殖利率", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^TNX"}, "tags": ["us", "macro"], "role": "單位 %，前一個美股交易日收盤；殖利率上升壓抑高本益比的科技股評價"},
-    {"id": "FINI", "name": "外資現貨買賣超", "group": "籌碼", "source": {"type": "twse_foreign_net"}, "tags": ["chip", "macro"], "unit": "億", "note": "上市，外資及陸資＋外資自營商；約 15:00 後公布", "role": "外資當日在上市市場的淨買賣金額，正值為買超"},
-    {"id": "FOI", "name": "外資台指期淨未平倉", "group": "籌碼", "source": {"type": "taifex_foreign_oi", "symbol": "TXF"}, "tags": ["chip", "macro"], "unit": "口", "note": "期交所三大法人，約 15:00 後公布", "role": "外資台指期多空未平倉淨口數，負值為淨空單；看單日增減判斷外資加碼避險或回補"},
-    {"id": "ADL", "name": "上市漲跌家數", "group": "市場內部", "source": {"type": "twse_breadth"}, "tags": ["macro"], "unit": "%", "note": "(上漲 − 下跌) ÷ (上漲 + 下跌)，只計股票", "role": "市場廣度；指數漲但多數股票跌代表只靠權值股撐盤"},
-    {"id": "MARGIN", "name": "大盤融資維持率", "group": "籌碼", "source": {"type": "twse_margin_ratio"}, "tags": ["chip", "macro"], "unit": "%", "note": "自行計算（上市個股融資餘額 × 收盤價 ÷ 融資金額），使用前一交易日數值，參考財經M平方，數值可能略有差異", "role": "低於 140% 附近容易出現斷頭賣壓"}
+    {
+      "id": "DXY",
+      "name": "美元指數",
+      "group": "匯率",
+      "source": {
+        "type": "yahoo",
+        "symbol": "DX-Y.NYB",
+        "asof": "14:00"
+      },
+      "tags": [
+        "fx"
+      ],
+      "role": "全球美元強弱；美元走弱時台幣通常升值"
+    },
+    {
+      "id": "USDTWD",
+      "name": "台匯（美元/台幣）",
+      "group": "匯率",
+      "source": {
+        "type": "yahoo",
+        "symbol": "TWD=X",
+        "asof": "14:00"
+      },
+      "tags": [
+        "fx"
+      ],
+      "role": "數值上升＝台幣貶值，多與外資匯出同步"
+    },
+    {
+      "id": "TXF",
+      "name": "台指期近月",
+      "group": "期貨",
+      "source": {
+        "type": "taifex_fut",
+        "symbol": "TX"
+      },
+      "tags": [],
+      "role": "台指期近月一般盤收盤（16:00 抓取時夜盤尚未開始，近全＝一般盤）"
+    },
+    {
+      "id": "TAIEX",
+      "name": "加權指數",
+      "group": "大盤",
+      "source": {
+        "type": "twse_index",
+        "symbol": "發行量加權股價指數"
+      },
+      "ma": [
+        30,
+        60,
+        100
+      ],
+      "historySymbol": "^TWII",
+      "tags": [],
+      "role": "現貨大盤，水位決策的基準"
+    },
+    {
+      "id": "2330",
+      "name": "台積電",
+      "group": "權值",
+      "source": {
+        "type": "twse_stock",
+        "symbol": "2330"
+      },
+      "tags": [
+        "anchor"
+      ],
+      "role": "最大權值股，外資進出首要標的"
+    },
+    {
+      "id": "VIX",
+      "name": "VIX 指數",
+      "group": "美股隔夜",
+      "source": {
+        "type": "yahoo",
+        "symbol": "^VIX"
+      },
+      "tags": [
+        "us",
+        "macro"
+      ],
+      "role": "美股恐慌指數，前一個美股交易日收盤；急升代表全球避險情緒升溫"
+    },
+    {
+      "id": "SOX",
+      "name": "費城半導體指數",
+      "group": "美股隔夜",
+      "source": {
+        "type": "yahoo",
+        "symbol": "^SOX"
+      },
+      "tags": [
+        "us"
+      ],
+      "role": "前一個美股交易日收盤，台灣半導體權值股的領先指標"
+    },
+    {
+      "id": "TNX",
+      "name": "美國十年債殖利率",
+      "group": "美股隔夜",
+      "source": {
+        "type": "yahoo",
+        "symbol": "^TNX"
+      },
+      "tags": [
+        "us",
+        "macro"
+      ],
+      "role": "單位 %，前一個美股交易日收盤；殖利率上升壓抑高本益比的科技股評價"
+    },
+    {
+      "id": "FINI",
+      "name": "外資現貨買賣超",
+      "group": "籌碼",
+      "source": {
+        "type": "twse_foreign_net"
+      },
+      "tags": [
+        "chip",
+        "macro"
+      ],
+      "unit": "億",
+      "note": "上市，外資及陸資＋外資自營商；約 15:00 後公布",
+      "role": "外資當日在上市市場的淨買賣金額，正值為買超"
+    },
+    {
+      "id": "FOI",
+      "name": "外資台指期淨未平倉",
+      "group": "籌碼",
+      "source": {
+        "type": "taifex_foreign_oi",
+        "symbol": "TXF"
+      },
+      "tags": [
+        "chip",
+        "macro"
+      ],
+      "unit": "口",
+      "note": "期交所三大法人，約 15:00 後公布",
+      "role": "外資台指期多空未平倉淨口數，負值為淨空單；看單日增減判斷外資加碼避險或回補"
+    },
+    {
+      "id": "ADL",
+      "name": "上市漲跌家數",
+      "group": "市場內部",
+      "source": {
+        "type": "twse_breadth"
+      },
+      "tags": [
+        "macro"
+      ],
+      "unit": "%",
+      "note": "(上漲 − 下跌) ÷ (上漲 + 下跌)，只計股票",
+      "role": "市場廣度；指數漲但多數股票跌代表只靠權值股撐盤"
+    },
+    {
+      "id": "MARGIN",
+      "name": "大盤融資維持率",
+      "group": "籌碼",
+      "source": {
+        "type": "twse_margin_ratio"
+      },
+      "tags": [
+        "chip",
+        "macro"
+      ],
+      "unit": "%",
+      "note": "自行計算（上市個股融資餘額 × 收盤價 ÷ 融資金額，分子不含 ETF，與財經M平方定義相同），使用前一交易日數值；財經M平方已於 2026 年 7 月停更，數值可能略有差異",
+      "role": "低於 140% 附近容易出現斷頭賣壓"
+    },
+    {
+      "id": "N225",
+      "name": "日經225",
+      "group": "亞洲同時段",
+      "source": {
+        "type": "yahoo",
+        "symbol": "^N225",
+        "sameDay": true
+      },
+      "tags": [
+        "asia"
+      ],
+      "role": "日股當天收盤（台北 14:30），與台股同時段交易，反映亞洲資金情緒"
+    },
+    {
+      "id": "KS11",
+      "name": "韓國綜合",
+      "group": "亞洲同時段",
+      "source": {
+        "type": "yahoo",
+        "symbol": "^KS11",
+        "sameDay": true
+      },
+      "tags": [
+        "asia"
+      ],
+      "role": "韓股當天收盤（台北 14:30），與台股同為半導體與出口權重高的市場"
+    },
+    {
+      "id": "MTXR",
+      "name": "散戶小台多空比",
+      "group": "籌碼",
+      "source": {
+        "type": "taifex_retail_mtx"
+      },
+      "tags": [
+        "chip",
+        "macro"
+      ],
+      "unit": "%",
+      "note": "−三大法人小台淨未平倉 ÷ 小台全市場未平倉；約 15:00 後公布",
+      "role": "正值為散戶淨多單；散戶越偏多通常被視為反向指標"
+    },
+    {
+      "id": "PCR",
+      "name": "選擇權 P/C Ratio",
+      "group": "籌碼",
+      "source": {
+        "type": "taifex_pcr"
+      },
+      "tags": [
+        "chip",
+        "macro"
+      ],
+      "unit": "%",
+      "note": "台指選擇權未平倉量 Put/Call 比率；因子看它相對前 20 日平均的變化",
+      "role": "賣權未平倉相對增加代表賣方（多為法人）在下方建立支撐"
+    },
+    {
+      "id": "VOL",
+      "name": "上市成交金額",
+      "group": "市場內部",
+      "source": {
+        "type": "twse_turnover"
+      },
+      "tags": [
+        "macro"
+      ],
+      "unit": "億",
+      "note": "因子看相對前 20 日均量的增減，並依指數漲跌給方向",
+      "role": "量增價漲代表追價資金進場，量增價跌代表賣壓湧現"
+    }
   ]
 }

@@ -35,22 +35,26 @@ def save_cache(cache):
     CACHE.write_text(json.dumps(cache, ensure_ascii=False, separators=(",", ":"), sort_keys=True), encoding="utf-8")
 
 
-def twse_day(d):
-    """一天的證交所資料：外資買賣超、漲跌家數、融資維持率（皆為 d 當天）。"""
-    out = {}
-    try:
-        out["fini"] = fetch.twse_foreign_net(None, d)
-    except Exception as e:
-        print(f"    {d} 外資：{e}")
-    try:
-        out["adl"] = fetch.twse_breadth(None, d)
-    except Exception as e:
-        print(f"    {d} 漲跌家數：{e}")
-    try:
-        m = fetch.margin_ratio_on(d)
-        out["margin"] = m["last"] if m else None
-    except Exception as e:
-        print(f"    {d} 融資維持率：{e}")
+def twse_day(d, out):
+    """補齊一天的證交所資料：外資買賣超、漲跌家數、融資維持率（皆為 d 當天）。
+    margin2 為分子不含 ETF 的融資維持率（與財經M平方同定義），margin 為舊算法。"""
+    if "fini" not in out:
+        try:
+            out["fini"] = fetch.twse_foreign_net(None, d)
+        except Exception as e:
+            print(f"    {d} 外資：{e}")
+    if "adl" not in out:
+        try:
+            out["adl"] = fetch.twse_breadth(None, d)
+        except Exception as e:
+            print(f"    {d} 漲跌家數：{e}")
+    if "margin2" not in out:
+        try:
+            m = fetch.margin_ratio_on(d)
+            out["margin2"] = m["last"] if m else None
+            out["margin"] = m["inclEtf"] if m else None
+        except Exception as e:
+            print(f"    {d} 融資維持率：{e}")
     fetch._cache.clear()  # 個股行情很大，用完即丟
     return out
 
@@ -106,6 +110,47 @@ def foi_series(start, end):
     return out
 
 
+def mtx_retail(start, end):
+    """散戶小台多空比：−三大法人小台淨未平倉 ÷ 小台全市場一般盤未平倉 × 100。"""
+    h, rows = taifex_months(start, end, "https://www.taifex.com.tw/cht/3/futContractsDateDown",
+                            lambda a, b: {"queryStartDate": f"{a:%Y/%m/%d}", "queryEndDate": f"{b:%Y/%m/%d}", "commodityId": "MXF"})
+    di, ni = h.index("日期"), h.index("多空未平倉口數淨額")
+    inst = {}
+    for x in rows:
+        if len(x) > ni and fetch.num(x[ni]) is not None:
+            k = x[di].strip().replace("/", "-")
+            inst.setdefault(k, []).append(fetch.num(x[ni]))
+    h, rows = taifex_months(start, end, "https://www.taifex.com.tw/cht/3/futDataDown",
+                            lambda a, b: {"down_type": "1", "commodity_id": "MTX", "commodity_id2": "",
+                                          "queryStartDate": f"{a:%Y/%m/%d}", "queryEndDate": f"{b:%Y/%m/%d}"})
+    ix = {k: h.index(k) for k in ("交易日期", "契約", "到期月份(週別)", "未沖銷契約數", "交易時段")}
+    oi = {}
+    for x in rows:
+        if len(x) > ix["交易時段"] and x[ix["契約"]].strip() == "MTX" and x[ix["交易時段"]].strip() == "一般" and "/" not in x[ix["到期月份(週別)"]]:
+            v = fetch.num(x[ix["未沖銷契約數"]])
+            if v is not None:
+                k = x[ix["交易日期"]].strip().replace("/", "-")
+                oi[k] = oi.get(k, 0) + v
+    return {k: {"last": round(-sum(v) / oi[k] * 100, 2), "chg": None, "pct": None, "oi": oi[k], "instNet": sum(v)}
+            for k, v in inst.items() if len(v) >= 3 and oi.get(k)}
+
+
+def pcr_series(start, end):
+    h, rows = taifex_months(start, end, "https://www.taifex.com.tw/cht/3/pcRatioDown",
+                            lambda a, b: {"queryStartDate": f"{a:%Y/%m/%d}", "queryEndDate": f"{b:%Y/%m/%d}"})
+    di, oi = h.index("日期"), h.index("買賣權未平倉量比率%")
+    return {x[di].strip().replace("/", "-"): fetch.num(x[oi]) for x in rows if len(x) > oi and fetch.num(x[oi]) is not None}
+
+
+def turnover_series(start, end):
+    out = {}
+    m = date(start.year, start.month, 1)
+    while m <= end:
+        out.update(fetch.turnover_rows(date(m.year + (m.month == 12), m.month % 12 + 1, 1) - timedelta(days=1)))
+        m = date(m.year + (m.month == 12), m.month % 12 + 1, 1)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=725)
@@ -124,6 +169,7 @@ def main():
     tsmc_raw = {d: v["close"] for d, v in tsmc.items()}
     tsmc_adj = {d: v["adj"] for d, v in tsmc.items()}
     us = {k: fetch.yahoo_daily(sym, "5y")[0] for k, sym in (("VIX", "^VIX"), ("SOX", "^SOX"), ("TNX", "^TNX"))}
+    asia = {k: dict(fetch.yahoo_daily(sym, "5y")[0]) for k, sym in (("N225", "^N225"), ("KS11", "^KS11"))}
     fx = {k: fetch.yahoo_snapshots(sym, "14:00", "2y") for k, sym in (("DXY", "DX-Y.NYB"), ("USDTWD", "TWD=X"))}
     fetch._cache.clear()
     print(f"  交易日 {len(cal)}：{cal[0]} ~ {cal[-1]}")
@@ -131,20 +177,26 @@ def main():
     print("== 期交所")
     tx = tx_series(cal[0], cal[-1])
     foi = foi_series(cal[0], cal[-1])
-    print(f"  台指期 {len(tx)} 天、外資未平倉 {len(foi)} 天")
+    retail = mtx_retail(cal[0], cal[-1])
+    pcr = pcr_series(cal[0] - timedelta(days=45), cal[-1])
+    print(f"  台指期 {len(tx)} 天、外資未平倉 {len(foi)} 天、散戶小台 {len(retail)} 天、P/C {len(pcr)} 天")
+    print("== 證交所成交金額（月資料）")
+    turn = turnover_series(cal[0] - timedelta(days=45), cal[-1])
+    fetch._cache.clear()
 
     print("== 證交所逐日（有快取的略過）")
     cache = json.loads(CACHE.read_text(encoding="utf-8")) if CACHE.exists() else {}
-    need = [d for d in [cal[0] - timedelta(days=7)] + cal if str(d) not in cache]
+    complete = lambda v: all(k in v for k in ("fini", "adl", "margin2"))  # noqa: E731
+    need = [d for d in [cal[0] - timedelta(days=7)] + cal if not complete(cache.get(str(d), {}))]
     # 融資維持率用前一交易日，所以第一天之前的那個交易日也要
     need = [d for d in need if d.weekday() < 5][: a.max_requests // 3]
     for k, d in enumerate(need, 1):
-        cache[str(d)] = twse_day(d)
+        cache[str(d)] = twse_day(d, cache.get(str(d), {}))
         if k % 20 == 0:
             save_cache(cache)
             print(f"  {k}/{len(need)} {d}")
     save_cache(cache)
-    missing = [d for d in cal if str(d) not in cache]
+    missing = [d for d in cal if not complete(cache.get(str(d), {}))]
     if missing:
         print(f"尚有 {len(missing)} 天證交所資料未抓，請再執行一次。")
 
@@ -159,7 +211,7 @@ def main():
         return fetch.quote(cur[-1], cur[-1] - prev[-1]) if cur and prev else None
 
     out, last_margin = [], None
-    margin_days = sorted(k for k, v in cache.items() if v.get("margin"))
+    margin_days = sorted(k for k, v in cache.items() if v.get("margin2"))
     for d in cal:
         q = {}
         for k in ("DXY", "USDTWD"):
@@ -190,9 +242,25 @@ def main():
             q["FOI"] = foi[str(d)]
         pm = [k for k in margin_days if k < str(d)]
         if pm:
-            v = cache[pm[-1]]["margin"]
+            v = cache[pm[-1]]["margin2"]
             q["MARGIN"] = {"last": v, "chg": None if last_margin is None else round(v - last_margin, 2), "pct": None, "asOf": pm[-1]}
             last_margin = v
+        for k in ("N225", "KS11"):
+            bars = asia[k]
+            prev = [bd for bd in bars if bd < d]
+            if d in bars and prev:
+                q[k] = fetch.quote(bars[d], bars[d] - bars[prev[-1]])
+        if str(d) in retail:
+            q["MTXR"] = retail[str(d)]
+        last, dev = fetch.with_dev(pcr, d)
+        if last is not None:
+            q["PCR"] = {"last": last, "chg": None, "pct": None, "dev": round(dev, 2)}
+        last, dev = fetch.with_dev({k: v[0] for k, v in turn.items()}, d)
+        if last is not None:
+            ratio = dev / (last - dev) * 100
+            mv = turn[str(d)][1] or 0
+            q["VOL"] = {"last": round(last, 1), "chg": None, "pct": None, "ratio": round(ratio, 1),
+                        "flow": round(ratio * (1 if mv > 0 else -1 if mv < 0 else 0), 1)}
         open_ = twii_ohlc[d]["open"]
         out.append({"date": str(d), "open": open_, "quotes": q})
     OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

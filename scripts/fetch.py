@@ -205,14 +205,18 @@ def yahoo_snapshots(symbol, asof="14:00", rng="1mo"):
     return sorted(snaps.items())
 
 
-def yahoo(symbol, d, asof=None):
+def yahoo(symbol, d, asof=None, sameDay=False):
+    """sameDay=True：收盤早於台股資料抓取時間的亞洲市場（日經、韓股），用 d 當天的收盤。"""
     if asof:
         snaps = yahoo_snapshots(symbol, asof, "1mo" if (datetime.now(TW).date() - d).days < 25 else "6mo")
         cur = [c for sd, c in snaps if sd == d]
         prev = [c for sd, c in snaps if sd < d]
         return quote(cur[-1], cur[-1] - prev[-1]) if cur and prev else None
     bars, taipei, meta = yahoo_daily(symbol)
-    if taipei:
+    if sameDay:
+        cur = [c for bd, c in bars if bd == d]
+        prev = [c for bd, c in bars if bd < d]
+    elif taipei:
         cur = [c for bd, c in bars if bd == d]
         if not cur and d == datetime.now(TW).date() and meta.get("regularMarketPrice") is not None:
             cur = [meta["regularMarketPrice"]]  # 尚未形成日線時用即時價
@@ -293,12 +297,13 @@ def twse_margin_ratio(_symbol, d):
 
 
 def margin_ratio_on(d):
-    """d 當天的上市融資維持率 ＝ Σ(各股融資餘額張數 × 1000 × 收盤價) ÷ 融資金額。漲跌由主程式依前一筆補上。"""
+    """d 當天的上市融資維持率 ＝ Σ(各股融資餘額張數 × 1000 × 收盤價，不含 ETF) ÷ 融資金額，與財經M平方的定義相同。
+    inclEtf 為分子含 ETF 的舊算法，留作對照。漲跌由主程式依前一筆補上。"""
     j = http("GET", f"https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={d:%Y%m%d}&selectType=ALL&response=json").json()
     if j.get("stat") != "OK" or j.get("date") != f"{d:%Y%m%d}":
         return None
     amount = lots = None
-    value = 0.0
+    value = etf_value = 0.0
     closes = {}
     for t in twse_mi_index(d, "ALLBUT0999"):
         f = t.get("fields") or []
@@ -318,12 +323,17 @@ def margin_ratio_on(d):
             lots = 0
             for r in rows:
                 b, c = num(r[bal_col]), closes.get(r[code_col].strip())
+                code = r[code_col].strip()
                 if b and c:
-                    value += b * 1000 * c
+                    if code.startswith(("00", "02")):  # ETF、ETN
+                        etf_value += b * 1000 * c
+                    else:
+                        value += b * 1000 * c
                     lots += b
     if not amount or not lots:
         return None
-    return {"last": round(value / amount * 100, 2), "chg": None, "pct": None}
+    return {"last": round(value / amount * 100, 2), "chg": None, "pct": None,
+            "inclEtf": round((value + etf_value) / amount * 100, 2)}
 
 
 def macromicro(chart_id, d):
@@ -369,6 +379,97 @@ def macromicro(chart_id, d):
     return q
 
 
+def taifex_csv(url, data):
+    rows = list(csv.reader(io.StringIO(http("POST", url, data=data).content.decode("cp950", errors="replace"))))
+    if not rows or not rows[0] or "日期" not in rows[0][0]:
+        return None, []
+    return [x.strip() for x in rows[0]], rows[1:]
+
+
+def mtx_oi(d):
+    """小台一般盤全市場未平倉口數（各月份與週契約加總，不含價差單）。"""
+    h, rows = taifex_csv("https://www.taifex.com.tw/cht/3/futDataDown", {
+        "down_type": "1", "commodity_id": "MTX", "commodity_id2": "",
+        "queryStartDate": f"{d:%Y/%m/%d}", "queryEndDate": f"{d:%Y/%m/%d}"})
+    if not h:
+        return None
+    ix = {k: h.index(k) for k in ("交易日期", "到期月份(週別)", "未沖銷契約數", "交易時段")}
+    oi = [num(x[ix["未沖銷契約數"]]) for x in rows if len(x) > ix["交易時段"] and x[ix["交易日期"]].strip() == f"{d:%Y/%m/%d}"
+          and x[ix["交易時段"]].strip() == "一般" and "/" not in x[ix["到期月份(週別)"]]]
+    oi = [v for v in oi if v is not None]
+    return sum(oi) if oi else None
+
+
+def taifex_retail_mtx(_symbol, d):
+    """散戶小台多空比（%）＝ −(三大法人小台多空未平倉淨額) ÷ 小台全市場未平倉 × 100。
+    正值代表散戶淨多單；散戶越偏多通常被視為反向指標。約 15:00 後公布。"""
+    h, rows = taifex_csv("https://www.taifex.com.tw/cht/3/futContractsDateDown", {
+        "queryStartDate": f"{d:%Y/%m/%d}", "queryEndDate": f"{d:%Y/%m/%d}", "commodityId": "MXF"})
+    if not h:
+        return None
+    di, ni = h.index("日期"), h.index("多空未平倉口數淨額")
+    nets = [num(x[ni]) for x in rows if len(x) > ni and x[di].strip() == f"{d:%Y/%m/%d}"]
+    if len(nets) < 3 or None in nets:
+        return None
+    oi = mtx_oi(d)
+    if not oi:
+        return None
+    inst = sum(nets)
+    return {"last": round(-inst / oi * 100, 2), "chg": None, "pct": None, "oi": oi, "instNet": inst}
+
+
+def pcr_rows(start, end):
+    h, rows = taifex_csv("https://www.taifex.com.tw/cht/3/pcRatioDown", {"queryStartDate": f"{start:%Y/%m/%d}", "queryEndDate": f"{end:%Y/%m/%d}"})
+    if not h:
+        return {}
+    di, oi = h.index("日期"), h.index("買賣權未平倉量比率%")
+    return {x[di].strip().replace("/", "-"): num(x[oi]) for x in rows if len(x) > oi and num(x[oi]) is not None}
+
+
+def with_dev(series, d, n=20):
+    """series：{日期字串: 數值}。回傳 d 當天數值與它減去前 n 個交易日平均的差。"""
+    keys = sorted(k for k in series if k <= str(d))
+    if not keys or keys[-1] != str(d) or len(keys) < n + 1:
+        return None, None
+    base = [series[k] for k in keys[-n - 1:-1]]
+    return series[str(d)], series[str(d)] - sum(base) / n
+
+
+def taifex_pcr(_symbol, d):
+    """台指選擇權未平倉 Put/Call Ratio（%）。dev ＝ 當天 − 前 20 個交易日平均：賣權未平倉相對增加，代表支撐變強。"""
+    last, dev = with_dev(pcr_rows(d - timedelta(days=45), d), d)
+    if last is None:
+        return None
+    return {"last": last, "chg": None, "pct": None, "dev": round(dev, 2)}
+
+
+def turnover_rows(d):
+    """證交所大盤成交金額（億元）與指數漲跌，抓 d 所在月份與前兩個月。"""
+    out = {}
+    m = Date(d.year, d.month, 1)
+    for _ in range(3):
+        j = http("GET", f"https://www.twse.com.tw/rwd/zh/afterTrading/FMTQIK?date={m:%Y%m%d}&response=json").json()
+        if j.get("stat") == "OK":
+            f = j["fields"]
+            for r in j.get("data", []):
+                y, mm, dd = map(int, r[0].split("/"))
+                out[f"{y + 1911}-{mm:02d}-{dd:02d}"] = (num(r[f.index("成交金額")]) / 1e8, num(r[f.index("漲跌點數")]))
+        m = (m - timedelta(days=1)).replace(day=1)
+    return out
+
+
+def twse_turnover(_symbol, d):
+    """上市成交金額（億元）。ratio ＝ 相對前 20 日均量增減 %；flow ＝ ratio × 指數漲跌方向（量增價漲為正、量增價跌為負）。"""
+    rows = turnover_rows(d)
+    last, dev = with_dev({k: v[0] for k, v in rows.items()}, d)
+    if last is None:
+        return None
+    ratio = dev / (last - dev) * 100
+    move = rows[str(d)][1] or 0
+    sign = 1 if move > 0 else -1 if move < 0 else 0
+    return {"last": round(last, 1), "chg": None, "pct": None, "ratio": round(ratio, 1), "flow": round(ratio * sign, 1)}
+
+
 def add_moving_averages(ins, d, q):
     """以 Yahoo 歷史收盤（d 之前）加上當天官方收盤計算均線，寫入 q["ma30"] 等欄位。"""
     bars, _, _ = yahoo_daily(ins["historySymbol"], "2y")
@@ -387,9 +488,46 @@ ADAPTERS = {
     "twse_foreign_net": twse_foreign_net,
     "taifex_foreign_oi": taifex_foreign_oi,
     "twse_breadth": twse_breadth,
+    "taifex_retail_mtx": taifex_retail_mtx,
+    "taifex_pcr": taifex_pcr,
+    "twse_turnover": twse_turnover,
     "macromicro": macromicro,
     "yahoo": yahoo,
 }
+
+
+def twse_holidays(year):
+    """證交所公布的休市日（不含「開始交易日」「最後交易日」等仍有交易的日子）。"""
+    j = http("GET", f"https://www.twse.com.tw/rwd/zh/holidaySchedule/holidaySchedule?date={year}0101&response=json").json()
+    return {r[0]: r[1] for r in j.get("data", []) if "交易日" not in r[1]}
+
+
+def typhoon_closed(d):
+    """行政院人事行政總處停班停課公告：臺北市今天停止上班時，證券市場休市。查不到時視為正常開市。"""
+    try:
+        r = requests.get("https://www.dgpa.gov.tw/typh/daily/nds.html", headers=UA, timeout=20)
+        r.encoding = "utf-8"
+        text = re.sub(r"<[^>]+>", " ", r.text)
+        m = re.search(r"臺北市\s+([^臺]{0,80})", text)
+        return bool(m and "今天停止上班" in m.group(1).replace(" ", ""))
+    except Exception as e:
+        print(f"    停班停課公告查詢失敗：{e}")
+        return False
+
+
+def market_closed(d):
+    """回傳休市原因；正常交易日回傳 None。"""
+    if d.weekday() >= 5:
+        return "週末"
+    try:
+        h = twse_holidays(d.year)
+        if str(d) in h:
+            return h[str(d)]
+    except Exception as e:
+        print(f"    休市日曆查詢失敗：{e}")
+    if d == datetime.now(TW).date() and typhoon_closed(d):
+        return "颱風停止上班"
+    return None
 
 
 def is_trading_day(d):
@@ -446,6 +584,8 @@ def premarket(cfg, d):
                 _, _, meta = yahoo_daily(src["symbol"], "5d")
                 last, prev = meta.get("regularMarketPrice"), base["quotes"].get(k, {}).get("last")
                 q = quote(last, last - prev) if last is not None and prev else None
+            elif src["type"] == "yahoo" and src.get("sameDay"):
+                continue  # 日韓股開盤前沒有新數值
             elif src["type"] == "yahoo":
                 q = yahoo(src["symbol"], d)
             elif src["type"] == "taifex_fut":
@@ -489,8 +629,9 @@ def main():
     cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
     if a.premarket:
         d = datetime.strptime(a.date, "%Y-%m-%d").date() if a.date else datetime.now(TW).date()
-        if d.weekday() >= 5:
-            print("週末不產生盤前參考。")
+        reason = market_closed(d)
+        if reason:
+            print(f"{d} 休市（{reason}），不產生盤前參考。")
             return 0
         return premarket(cfg, d)
     end = datetime.strptime(a.date, "%Y-%m-%d").date() if a.date else datetime.now(TW).date()

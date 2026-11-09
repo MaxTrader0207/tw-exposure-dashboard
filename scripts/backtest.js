@@ -128,6 +128,18 @@ const fr = days.map((d) => d.quotes.FINI?.ratio).filter((v) => v != null);
 const fm = fr.reduce((a, b) => a + b, 0) / fr.length;
 const fsd = Math.sqrt(fr.reduce((a, b) => a + (b - fm) ** 2, 0) / (fr.length - 1));
 
+// 6. 各因子原始值分布（設定門檻用）與融資維持率分布
+const stats = (xs) => {
+  const v = xs.filter((x) => x != null && Number.isFinite(x)).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const m = v.reduce((a, b) => a + b, 0) / v.length;
+  const sd = Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, v.length - 1));
+  const q = (p) => v[Math.min(v.length - 1, Math.floor(v.length * p))];
+  return {n: v.length, mean: r2(m), std: r2(sd), p5: r2(q(0.05)), p50: r2(q(0.5)), p95: r2(q(0.95))};
+};
+const factorStats = Object.fromEntries(cur.factors.map((f, k) => [f.key, {...stats(res.map((r) => (r.factors[k].missing ? null : r.factors[k].raw))), scale: f.scale, center: f.center ?? null}]));
+factorStats.MARGIN_level = stats(days.map((d) => d.quotes.MARGIN?.last));
+
 const strip = (m) => { const {_curve, _dates, ...rest} = m; return rest; };
 const strategies = [now, raw, ...parts, fixedSame, fixed60, hold];
 const out = {
@@ -139,6 +151,7 @@ const out = {
   grid: grid.map(strip),
   leaveOneOut: loo,
   ic,
+  factorStats,
   finiRatio: {n: fr.length, mean: r2(fm), std: r2(fsd), p5: r2([...fr].sort((a, b) => a - b)[Math.floor(fr.length * 0.05)]), p95: r2([...fr].sort((a, b) => a - b)[Math.floor(fr.length * 0.95)])},
   equity: {dates: now._dates, series: Object.fromEntries([now, raw, fixedSame, hold].map((m) => [m.name, m._curve.map((v) => r2(v, 4))])),
     exposure: eCur.slice(2)},
@@ -150,3 +163,4 @@ console.table(out.grid.map(({cap, buffer, cagr, sharpe, maxdd, avgMove, bigMoves
 console.table(loo);
 console.table(ic);
 console.log('外資買賣超比例', out.finiRatio);
+console.table(factorStats);

@@ -26,6 +26,10 @@
       if (!xs.length) return null;
       return (xs.filter((v) => v > 0).length - xs.filter((v) => v < 0).length) / xs.length;
     },
+    avg: (f, q, ins) => {
+      const xs = members(ins, f.tag).map((id) => num(q[id]?.pct)).filter((v) => v != null);
+      return xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : null;
+    },
     rel_avg: (f, q, ins) => {
       const xs = members(ins, f.tag).map((id) => num(q[id]?.pct)).filter((v) => v != null);
       const b = num(q[f.b]?.pct);
