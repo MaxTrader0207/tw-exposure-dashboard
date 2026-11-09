@@ -1,26 +1,33 @@
-"""診斷用：用真的 Chromium 開財經M平方頁面，看能否通過 Cloudflare 並攔到圖表資料。"""
-import json
+"""診斷用：外資買賣超、外資台指期未平倉、漲跌家數的資料格式。"""
+import time
 
-from playwright.sync_api import sync_playwright
+import requests
 
-PAGE = "https://www.macromicro.me/charts/53117/taiwan-taiex-maintenance-margin"
-with sync_playwright() as p:
-    b = p.chromium.launch(args=["--disable-blink-features=AutomationControlled"])
-    ctx = b.new_context(locale="zh-TW", user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36")
-    pg = ctx.new_page()
-    hits = []
-    pg.on("response", lambda r: hits.append(r) if "/charts/data/" in r.url else None)
-    r = pg.goto(PAGE, wait_until="domcontentloaded", timeout=60000)
-    print("first", r.status if r else None)
-    pg.wait_for_timeout(20000)
-    print("title", pg.title())
-    print("text", pg.inner_text("body")[:400].replace("\n", " "))
-    for h in hits:
-        print("data", h.url, h.status)
-        try:
-            j = h.json()
-            s = json.dumps(j)[:600]
-            print(s)
-        except Exception as e:
-            print("not json", e)
-    b.close()
+UA = {"User-Agent": "Mozilla/5.0 (tw-exposure-dashboard)"}
+D = "20261106"
+
+j = requests.get(f"https://www.twse.com.tw/rwd/zh/fund/BFI82U?type=day&dayDate={D}&response=json", headers=UA, timeout=60).json()
+print("== BFI82U", j.get("stat"), j.get("date"), j.get("fields"))
+for r in j.get("data", []):
+    print("  ", r)
+time.sleep(3)
+
+r = requests.post("https://www.taifex.com.tw/cht/3/futContractsDateDown", headers=UA, timeout=60,
+                  data={"queryStartDate": "2026/10/28", "queryEndDate": "2026/11/06", "commodityId": "TXF"})
+txt = r.content.decode("cp950", errors="replace").splitlines()
+print("== futContractsDateDown", r.status_code, len(txt))
+for line in txt[:1]:
+    print("  ", line)
+for line in txt[1:]:
+    if "外資" in line:
+        print("  ", line)
+time.sleep(3)
+
+j = requests.get(f"https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={D}&type=ALLBUT0999&response=json", headers=UA, timeout=60).json()
+print("== MI_INDEX", j.get("stat"), j.get("date"))
+for t in j.get("tables", []):
+    title = t.get("title") or ""
+    print("  table:", title, "| fields:", (t.get("fields") or [])[:6], "| rows:", len(t.get("data", [])))
+    if "漲跌" in title or any("上漲" in str(x[0]) for x in t.get("data", [])[:10] if x):
+        for row in t.get("data", []):
+            print("     ", row)
