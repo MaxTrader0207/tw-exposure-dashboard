@@ -102,9 +102,9 @@
       "a": "FINI",
       "center": 0,
       "weight": 10,
-      "scale": 10,
+      "scale": 15,
       "dir": 1,
-      "desc": "外資買賣超佔外資成交金額（買進＋賣出）的比例；門檻依歷史分布設定",
+      "desc": "外資買賣超佔外資成交金額（買進＋賣出）的比例；過去兩年標準差約 7.5%，±15%（約兩個標準差）計滿分",
       "field": "ratio"
     },
     {
@@ -172,8 +172,8 @@
         "tone": "down"
       }
     ],
-    "_說明": "建議水位 = base + slope × 綜合分數 + 均線調整，限制在 floor～cap。",
-    "maxDailyChange": 0
+    "_說明": "建議水位 = base + slope × 綜合分數 + 均線調整，限制在 floor～cap；maxDailyChange 是每天最多變動幾個百分點（0 = 不限）。",
+    "maxDailyChange": 10
   },
   "correlationWindow": 20,
   "maRules": {
@@ -195,6 +195,6 @@
         "below": 5
       }
     ],
-    "buffer": 0
+    "buffer": 1
   }
 }
