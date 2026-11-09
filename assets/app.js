@@ -353,7 +353,7 @@
     ins.forEach((i) => {
       const r = q[i.id] || {};
       qt.append(el('tr', {}, el('td', {}, i.name, ...(i.note ? [el('div', {class: 'muted'}, '※ ' + i.note)] : [])), el('td', {}, i.source.symbol || '—'), el('td', {}, i.source.type), el('td', {}, i.group),
-        el('td', {class: 'n ' + cls(r.chg)}, fmtNum(r.last) + (i.unit && r.last != null ? i.unit : '')), el('td', {class: 'n ' + cls(r.chg)}, r.chg == null ? '—' : sgn(r.chg, 2)), el('td', {class: 'n ' + cls(r.pct)}, pct(r.pct))));
+        el('td', {class: 'n ' + cls(r.chg)}, fmtNum(r.last) + (i.unit && r.last != null ? i.unit : '')), el('td', {class: 'n ' + cls(r.chg)}, r.chg == null ? '—' : sgn(r.chg, 2)), el('td', {class: 'n ' + (i.unit ? '' : cls(r.pct))}, i.unit ? '—' : pct(r.pct))));
     });
   }
 
