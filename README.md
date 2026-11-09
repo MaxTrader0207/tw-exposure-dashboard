@@ -11,7 +11,7 @@ scripts/fetch.py          抓取腳本，依來源類型呼叫對應 adapter
 data/history.json         每日報價歷史（Actions 自動寫入，保留 400 天）
 assets/engine.js          水位計算引擎（只讀設定檔，不寫死代號）
 assets/app.js             儀表板畫面（所有區塊依設定自動產生）
-.github/workflows/update.yml  排程：週一到週五 台北 14:40、15:30
+.github/workflows/update.yml  排程：週一到週五 台北 16:00、17:00
 ```
 
 計算只在瀏覽器端做一次，歷史每一天的水位都用「目前的」模型重算，所以調整權重後整段歷史會一起更新。
@@ -63,6 +63,6 @@ assets/app.js             儀表板畫面（所有區塊依設定自動產生）
 
 ## 準時觸發（Cloudflare Worker）
 
-GitHub 免費排程常延遲數小時，所以由 `cloudflare/trigger-worker.js` 在台北時間平日 14:40、15:30 準時呼叫 GitHub 執行更新；`update.yml` 裡的 GitHub 排程保留作為備援，重複執行不會造成問題。
+GitHub 免費排程常延遲數小時，所以由 `cloudflare/trigger-worker.js` 在台北時間平日 16:00、17:00 準時呼叫 GitHub 執行更新；`update.yml` 裡的 GitHub 排程保留作為備援，重複執行不會造成問題。
 
-設定：Cloudflare 後台建立 Worker 貼上程式 → Secret `GH_TOKEN`（fine-grained token，只授權本 repo，Actions: Read and write）→ Cron Triggers 加入 `40 6 * * MON-FRI` 與 `30 7 * * MON-FRI`（UTC）。開啟 Worker 網址可看到最近 5 次執行狀態。token 到期前記得更新。
+設定：Cloudflare 後台建立 Worker 貼上程式 → Secret `GH_TOKEN`（fine-grained token，只授權本 repo，Actions: Read and write）→ Cron Triggers 加入 `0 8 * * MON-FRI` 與 `0 9 * * MON-FRI`（UTC）。開啟 Worker 網址可看到最近 5 次執行狀態。token 到期前記得更新。

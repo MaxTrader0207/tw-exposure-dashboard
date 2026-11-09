@@ -4,7 +4,7 @@
   "instruments": [
     {"id": "DXY", "name": "美元指數", "group": "匯率", "source": {"type": "yahoo", "symbol": "DX-Y.NYB", "asof": "14:00"}, "tags": ["fx"], "role": "全球美元強弱；美元走弱時台幣通常升值"},
     {"id": "USDTWD", "name": "台匯（美元/台幣）", "group": "匯率", "source": {"type": "yahoo", "symbol": "TWD=X", "asof": "14:00"}, "tags": ["fx"], "role": "數值上升＝台幣貶值，多與外資匯出同步"},
-    {"id": "TXF", "name": "台指期近月", "group": "期貨", "source": {"type": "taifex_fut", "symbol": "TX"}, "tags": [], "role": "台指期近月一般盤收盤（14:40 抓取時夜盤尚未開始，近全＝一般盤）"},
+    {"id": "TXF", "name": "台指期近月", "group": "期貨", "source": {"type": "taifex_fut", "symbol": "TX"}, "tags": [], "role": "台指期近月一般盤收盤（16:00 抓取時夜盤尚未開始，近全＝一般盤）"},
     {"id": "TAIEX", "name": "加權指數", "group": "大盤", "source": {"type": "twse_index", "symbol": "發行量加權股價指數"}, "ma": [30, 60, 100], "historySymbol": "^TWII", "tags": [], "role": "現貨大盤，水位決策的基準"},
     {"id": "2330", "name": "台積電", "group": "權值", "source": {"type": "twse_stock", "symbol": "2330"}, "tags": ["anchor"], "role": "最大權值股，外資進出首要標的"},
     {"id": "VIX", "name": "VIX 指數", "group": "美股隔夜", "source": {"type": "yahoo", "symbol": "^VIX"}, "tags": ["us", "macro"], "role": "美股恐慌指數，前一個美股交易日收盤；急升代表全球避險情緒升溫"},

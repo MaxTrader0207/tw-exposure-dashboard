@@ -8,8 +8,8 @@
  *   Variables and Secrets → GH_TOKEN（Secret）：GitHub fine-grained token，
  *     只授權 MaxTrader0207/tw-exposure-dashboard，權限 Actions: Read and write。
  *   Triggers → Cron Triggers（UTC 時間）：
- *     40 6 * * MON-FRI   → 台北 14:40
- *     30 7 * * MON-FRI   → 台北 15:30（補抓，資料延遲時）
+ *     0 8 * * MON-FRI    → 台北 16:00（外資、期貨三大法人等資料都已公布）
+ *     0 9 * * MON-FRI    → 台北 17:00（補抓，資料延遲時）
  *
  * 開啟 Worker 網址會顯示最近 5 次執行狀態，方便確認有沒有準時跑。
  */
