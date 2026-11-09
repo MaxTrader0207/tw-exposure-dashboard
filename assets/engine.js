@@ -11,8 +11,8 @@
   // 每個因子類型一個函式；要新增類型就在這裡加一個。
   const FACTOR_TYPES = {
     pct: (f, q) => num(q[f.a]?.pct),
-    chg: (f, q) => { const v = num(q[f.a]?.chg); return v == null ? null : v * (f.mult ?? 1); },
-    level: (f, q) => { const v = num(q[f.a]?.last); return v == null ? null : v - (f.center ?? 0); },
+    chg: (f, q) => { const v = num(q[f.a]?.[f.field || 'chg']); return v == null ? null : v * (f.mult ?? 1); },
+    level: (f, q) => { const v = num(q[f.a]?.[f.field || 'last']); return v == null ? null : v - (f.center ?? 0); },
     spread: (f, q) => {
       const a = num(q[f.a]?.pct), b = num(q[f.b]?.pct);
       return a == null || b == null ? null : a - b;
@@ -40,7 +40,13 @@
     return {index: tiers.length - 1 - i, ...tiers[i]};
   }
 
-  function computeDay(quotes, model, instruments) {
+  /**
+   * 計算一天的建議水位。prev 是前一個交易日的結果（computeDay 的回傳值），用於：
+   *   policy.maxDailyChange：水位每天最多變動幾個百分點，避免大幅來回跳動；
+   *   maRules.buffer：均線緩衝帶（%），指數在均線 ± buffer 之間時維持前一天的站上／跌破判斷。
+   * 沒有 prev 時兩者都不作用。要算一整段歷史請用 computeSeries，它會依序帶入 prev。
+   */
+  function computeDay(quotes, model, instruments, prev) {
     const factors = model.factors.map((f) => {
       const fn = FACTOR_TYPES[f.type];
       const raw = fn ? fn(f, quotes, instruments) : null;
@@ -54,23 +60,41 @@
     });
     const p = model.policy;
     const score = round(factors.reduce((s, f) => s + f.contrib, 0), 1);
-    const ma = maAdjust(quotes, model);
+    const ma = maAdjust(quotes, model, prev?.maState);
     const maPts = ma.reduce((s, r) => s + r.pts, 0);
-    const exposure = Math.round(clamp(p.base + p.slope * score + maPts, p.floor, p.cap));
-    return {factors, score, ma, maPts, exposure, tier: tierFor(exposure, p)};
+    const rawExposure = clamp(p.base + p.slope * score + maPts, p.floor, p.cap);
+    let exposure = rawExposure;
+    const lim = Number(p.maxDailyChange) || 0;
+    if (lim > 0 && prev?.exposure != null) exposure = clamp(rawExposure, prev.exposure - lim, prev.exposure + lim);
+    exposure = Math.round(exposure);
+    const maState = Object.fromEntries(ma.filter((r) => r.above != null).map((r) => [r.n, r.above]));
+    return {factors, score, ma, maPts, maState, rawExposure: Math.round(rawExposure), exposure,
+      capped: Math.round(rawExposure) !== exposure, tier: tierFor(exposure, p)};
   }
 
-  // 均線規則：收盤 ≥ 均線加 above 個百分點，低於均線減 below 個百分點，每條均線分開計算。
+  // 依序計算多天，每天把前一天的結果當作 prev。quotesList 由舊到新。
+  function computeSeries(quotesList, model, instruments) {
+    let prev = null;
+    return quotesList.map((q) => (prev = computeDay(q, model, instruments, prev)));
+  }
+
+  // 均線規則：站上均線加 above 個百分點，跌破減 below 個百分點，每條均線分開計算。
+  // 緩衝帶 buffer（%）：收盤 ≥ 均線 ×(1+buffer) 才算站上、≤ 均線 ×(1−buffer) 才算跌破，介於中間維持前一天判斷。
   // 均線數值由抓取程式寫在報價的 ma30、ma60… 欄位。
-  function maAdjust(quotes, model) {
+  function maAdjust(quotes, model, prevState) {
     const m = model.maRules;
     if (!m) return [];
     const last = num(quotes[m.a]?.last);
+    const b = (Number(m.buffer) || 0) / 100;
     return m.rules.map((r) => {
       const ma = num(quotes[m.a]?.['ma' + r.n]);
       if (last == null || ma == null) return {n: r.n, ma: null, gap: null, above: null, pts: 0, missing: true};
-      const above = last >= ma;
-      return {n: r.n, ma, gap: round((last / ma - 1) * 100, 2), above, pts: above ? Number(r.above) : -Number(r.below)};
+      let above, held = false;
+      if (last >= ma * (1 + b)) above = true;
+      else if (last <= ma * (1 - b)) above = false;
+      else if (prevState && prevState[r.n] != null) { above = prevState[r.n]; held = true; }
+      else above = last >= ma;
+      return {n: r.n, ma, gap: round((last / ma - 1) * 100, 2), above, held, pts: above ? Number(r.above) : -Number(r.below)};
     });
   }
 
@@ -104,6 +128,6 @@
     return {days: days.length, matrix, beta};
   }
 
-  const api = {computeDay, relations, FACTOR_TYPES, members};
+  const api = {computeDay, computeSeries, relations, FACTOR_TYPES, members};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Engine = api;
 })(this);

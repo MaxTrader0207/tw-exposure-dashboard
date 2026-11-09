@@ -1,0 +1,44 @@
+name: 回測水位規則
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "回測長度（日曆日，Yahoo 匯率小時線最多約 725 天）"
+        type: string
+        default: "725"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: pip install requests
+      - name: 建立歷史資料（證交所逐日資料有快取）
+        run: python scripts/build_backtest.py --days "${{ inputs.days || '725' }}"
+      - name: 回測
+        run: node scripts/backtest.js
+      - name: 提交結果（失敗時也保存已抓到的快取）
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/cache data/backtest_quotes.json data/backtest.json 2>/dev/null || true
+          git diff --cached --quiet && echo "無變更" && exit 0
+          git commit -m "backtest: $(TZ=Asia/Taipei date +%F) 回測資料與結果"
+          git pull --rebase -q origin main
+          git push

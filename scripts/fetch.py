@@ -178,6 +178,19 @@ def yahoo_daily(symbol, rng="6mo"):
     return sorted(bars.items()), meta.get("exchangeTimezoneName") == "Asia/Taipei", meta
 
 
+def yahoo_ohlc(symbol, rng="5y"):
+    """{交易所當地日期: {"open", "close", "adj"}}，回測用。"""
+    res = yahoo_chart(symbol, "1d", rng)
+    off = res["meta"].get("gmtoffset", 0)
+    qd = res["indicators"]["quote"][0]
+    adj = (res["indicators"].get("adjclose") or [{}])[0].get("adjclose") or qd["close"]
+    out = {}
+    for t, o, c, a in zip(res.get("timestamp", []), qd["open"], qd["close"], adj):
+        if c is not None:
+            out[datetime.fromtimestamp(t + off, timezone.utc).date()] = {"open": o, "close": c, "adj": a}
+    return out
+
+
 def yahoo_snapshots(symbol, asof="14:00", rng="1mo"):
     """24 小時商品（匯率）在台北時間 asof 當下的價格：取收盤時間 ≤ asof 的最後一根小時線。"""
     hh, mm = map(int, asof.split(":"))
@@ -226,7 +239,8 @@ def twse_foreign_net(_symbol, d):
         return None
     net = sum(num(r[f.index("買賣差額")]) or 0 for r in rows) / 1e8
     gross = sum((num(r[f.index("買進金額")]) or 0) + (num(r[f.index("賣出金額")]) or 0) for r in rows) / 1e8
-    return {"last": round(net, 2), "chg": None, "pct": None, "gross": round(gross, 2)}
+    # ratio：買賣超佔外資成交金額（買進＋賣出）的比例，不受市場規模影響
+    return {"last": round(net, 2), "chg": None, "pct": None, "gross": round(gross, 2), "ratio": round(net / gross * 100, 2) if gross else None}
 
 
 def taifex_foreign_oi(symbol, d):

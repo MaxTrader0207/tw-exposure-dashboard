@@ -1,5 +1,5 @@
 {
-  "_說明": "水位模型。factors 的 type 可用：pct（a 的漲跌幅）、chg（a 的漲跌值 × mult，例如殖利率變動換成 bp）、level（a 的數值 − center）、spread（a 漲跌幅 − b 漲跌幅）、basis（(a 價 − b 價) ÷ b 價 × 100）、breadth（tag 族群 (上漲檔數 − 下跌檔數) ÷ 檔數）、rel_avg（tag 族群平均漲跌幅 − b 漲跌幅）。a、b 填商品 id，tag 填 instruments.json 的標籤。分數 = clamp(dir × 原始值 ÷ scale, −1, 1) × weight；水位 = base + slope × 綜合分數，限制在 floor 到 cap。 maRules：加權指數與自身均線比較，收盤 ≥ 均線水位直接加 above 個百分點，低於均線減 below 個百分點，每條均線分開計算。 tiers 的 stance 是顯示在建議水位旁的簡短看法，tone 決定顏色（up 紅、down 綠、neutral 灰）。",
+  "_說明": "水位模型。factors 的 type 可用：pct（a 的漲跌幅）、chg（a 的漲跌值 × mult，例如殖利率變動換成 bp）、level（a 的數值 − center；可用 field 指定欄位，例如 ratio）、spread（a 漲跌幅 − b 漲跌幅）、basis（(a 價 − b 價) ÷ b 價 × 100）、breadth（tag 族群 (上漲檔數 − 下跌檔數) ÷ 檔數）、rel_avg（tag 族群平均漲跌幅 − b 漲跌幅）。a、b 填商品 id，tag 填 instruments.json 的標籤。分數 = clamp(dir × 原始值 ÷ scale, −1, 1) × weight；水位 = base + slope × 綜合分數，限制在 floor 到 cap。 maRules：加權指數與自身均線比較，收盤 ≥ 均線水位直接加 above 個百分點，低於均線減 below 個百分點，每條均線分開計算。 tiers 的 stance 是顯示在建議水位旁的簡短看法，tone 決定顏色（up 紅、down 綠、neutral 灰）。",
   "factors": [
     {
       "key": "fx",
@@ -102,9 +102,10 @@
       "a": "FINI",
       "center": 0,
       "weight": 10,
-      "scale": 300,
+      "scale": 10,
       "dir": 1,
-      "desc": "外資上市買賣超（億元）；賣超 300 億扣滿、買超 300 億加滿"
+      "desc": "外資買賣超佔外資成交金額（買進＋賣出）的比例；門檻依歷史分布設定",
+      "field": "ratio"
     },
     {
       "key": "foi",
@@ -171,7 +172,8 @@
         "tone": "down"
       }
     ],
-    "_說明": "建議水位 = base + slope × 綜合分數 + 均線調整，限制在 floor～cap。"
+    "_說明": "建議水位 = base + slope × 綜合分數 + 均線調整，限制在 floor～cap。",
+    "maxDailyChange": 0
   },
   "correlationWindow": 20,
   "maRules": {
@@ -192,6 +194,7 @@
         "above": 5,
         "below": 5
       }
-    ]
+    ],
+    "buffer": 0
   }
 }

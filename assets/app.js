@@ -41,8 +41,12 @@
   const latest = history[history.length - 1];
   const prev = history[history.length - 2];
   const q = latest.quotes;
-  const today = Engine.computeDay(q, model, ins);
-  const yday = prev ? Engine.computeDay(prev.quotes, model, ins) : null;
+  // 依序計算整段歷史：每日變動上限與均線緩衝帶都需要前一天的結果
+  const allRes = Engine.computeSeries(history.map((d) => d.quotes), model, ins);
+  const today = allRes[allRes.length - 1];
+  const yday = prev ? allRes[allRes.length - 2] : null;
+  const lim = Number(model.policy.maxDailyChange) || 0;
+  const capNote = (r) => (r.capped ? `未限制前 ${r.rawExposure}%，受每日最多 ±${lim} 點限制` : '');
 
   /* ---------- 標頭與磁貼 ---------- */
   $('meta').textContent = `資料日 ${latest.date}｜${latest.source}｜累積 ${history.length} 個交易日`;
@@ -59,7 +63,8 @@
   $('tiles').append(
     el('div', {class: 'tile hero'}, el('span', {class: 'muted'}, '建議持股水位'),
       el('span', {class: 'v hero-row'}, today.exposure + '%', stanceBadge(today.tier)),
-      el('span', {class: 'muted'}, `${today.tier.label !== today.tier.stance ? today.tier.label + '｜' : ''}${yday ? `較前一日 ${delta > 0 ? '+' : ''}${delta} 個百分點${yday.tier.stance !== today.tier.stance ? `（由「${yday.tier.stance}」轉為「${today.tier.stance}」）` : ''}` : '佔可投資資金比例'}`)),
+      el('span', {class: 'muted'}, `${today.tier.label !== today.tier.stance ? today.tier.label + '｜' : ''}${yday ? `較前一日 ${delta > 0 ? '+' : ''}${delta} 個百分點${yday.tier.stance !== today.tier.stance ? `（由「${yday.tier.stance}」轉為「${today.tier.stance}」）` : ''}` : '佔可投資資金比例'}`),
+      ...(today.capped ? [el('span', {class: 'muted'}, capNote(today))] : [])),
     tile('綜合分數', sgn(today.score, 1), '負值偏空、正值偏多', cls(today.score)),
     ...(today.ma.length ? [tile('均線調整', sgn(today.maPts, 0) + ' 點', `站上 ${today.ma.filter((r) => r.above).length}／${today.ma.length} 條均線`, cls(today.maPts))] : []),
     tile(name(bench), pct(q[bench]?.pct), fmtNum(q[bench]?.last), cls(q[bench]?.pct))
@@ -121,7 +126,7 @@
   /* ---------- 歷史 ---------- */
   const maNs = (model.maRules?.rules || []).map((r) => r.n);
   const maColors = ['#f59e0b', '#a78bfa', '#38bdf8'];
-  const series = history.map((d) => ({date: d.date, ...(({exposure, tier}) => ({exposure, stance: tier.stance || tier.label}))(Engine.computeDay(d.quotes, model, ins)), idx: d.quotes[bench]?.last,
+  const series = history.map((d, i) => ({date: d.date, exposure: allRes[i].exposure, stance: allRes[i].tier.stance || allRes[i].tier.label, idx: d.quotes[bench]?.last,
     ma: Object.fromEntries(maNs.map((n) => [n, d.quotes[bench]?.['ma' + n] ?? null]))}));
   function drawHist() {
     const box = $('histChart');
@@ -164,7 +169,7 @@
   function drawPremarket() {
     // 只在盤前資料比最新收盤還新時顯示（16:00 正式更新後自動隱藏）
     if (!pm || pm.date <= latest.date) return;
-    const r = Engine.computeDay(pm.quotes, model, ins);
+    const r = Engine.computeDay(pm.quotes, model, ins, today);
     const box = $('premarket');
     box.hidden = false;
     const d = r.exposure - today.exposure;
@@ -190,13 +195,13 @@
     const box = $('maCards');
     if (!today.ma.length) { box.closest('section').hidden = true; return; }
     const rules = model.maRules.rules;
-    $('maNote').textContent = `${name(bench)}收盤 ${fmtNum(q[bench]?.last)}。每條均線分開計算：收盤站上（≥）均線水位加分，跌破則減分，直接加在水位上。`;
+    $('maNote').textContent = `${name(bench)}收盤 ${fmtNum(q[bench]?.last)}。每條均線分開計算：收盤站上均線水位加分，跌破則減分，直接加在水位上。${model.maRules.buffer ? `設有 ±${model.maRules.buffer}% 緩衝帶：超過均線 ${model.maRules.buffer}% 才算站上、低於 ${model.maRules.buffer}% 才算跌破，介於中間維持前一天的判斷，避免指數在均線附近時水位來回跳動。` : ''}`;
     today.ma.forEach((r, k) => {
       const rule = rules[k];
       box.append(el('div', {class: 'tile'},
         el('span', {class: 'muted'}, `${r.n} 日均線`),
         el('span', {class: 'v'}, r.ma == null ? '—' : fmtNum(r.ma)),
-        el('span', {class: cls(r.gap)}, r.missing ? '歷史不足，暫不計算' : `${r.above ? '站上' : '跌破'}，乖離 ${pct(r.gap)}`),
+        el('span', {class: cls(r.gap)}, r.missing ? '歷史不足，暫不計算' : `${r.above ? '站上' : '跌破'}，乖離 ${pct(r.gap)}${r.held ? `（在 ±${model.maRules.buffer}% 緩衝帶內，維持前一日判斷）` : ''}`),
         el('span', {class: 'muted'}, `水位 `, el('b', {class: cls(r.pts)}, sgn(r.pts, 0) + ' 點'), `（站上 +${rule.above}／跌破 −${rule.below}）`)));
     });
   }
@@ -254,7 +259,7 @@
     const defs = Object.fromEntries(model.factors.map((d) => [d.key, d]));
     const neg = sorted.filter((f) => f.contrib < 0), pos = sorted.filter((f) => f.contrib > 0).reverse();
     box.append(el('div', {class: 'insight'}, el('b', {}, '總結：'),
-      `${neg.length ? '扣分主要來自' + neg.slice(0, 3).map((f) => f.name).join('、') : '沒有明顯扣分因子'}；${pos.length ? '緩衝來自' + pos.slice(0, 2).map((f) => f.name).join('、') : '沒有因子加分'}。${yday ? `水位較前一日 ${delta >= 0 ? '上調' : '下調'} ${Math.abs(delta)} 個百分點。` : ''}`));
+      `${neg.length ? '扣分主要來自' + neg.slice(0, 3).map((f) => f.name).join('、') : '沒有明顯扣分因子'}；${pos.length ? '緩衝來自' + pos.slice(0, 2).map((f) => f.name).join('、') : '沒有因子加分'}。${yday ? `水位較前一日 ${delta >= 0 ? '上調' : '下調'} ${Math.abs(delta)} 個百分點${today.capped ? `（${capNote(today)}）` : ''}。` : ''}`));
     if (today.ma.length) {
       const up = today.ma.filter((r) => r.above), dn = today.ma.filter((r) => r.above === false);
       box.append(el('div', {class: 'insight ' + (today.maPts < 0 ? 'neg' : today.maPts > 0 ? 'pos' : '')},
@@ -316,13 +321,14 @@
   const add = (id, c) => { if (id) (need[id] ||= new Set()).add(c); };
   model.factors.forEach((f) => {
     if (['pct', 'spread'].includes(f.type)) { add(f.a, 'pct'); add(f.b, 'pct'); }
-    if (f.type === 'chg') add(f.a, 'chg');
-    if (['basis', 'level'].includes(f.type)) { add(f.a, 'last'); add(f.b, 'last'); }
+    if (f.type === 'chg') add(f.a, f.field || 'chg');
+    if (f.type === 'level') add(f.a, f.field || 'last');
+    if (f.type === 'basis') { add(f.a, 'last'); add(f.b, 'last'); }
     if (['breadth', 'rel_avg'].includes(f.type)) { Engine.members(ins, f.tag).forEach((id) => add(id, 'pct')); add(f.b, 'pct'); }
   });
-  const colLabel = {last: (i) => `${i.name}${i.unit ? '（' + i.unit + '）' : ' 數值'}`, pct: (i) => `${i.name} 漲跌 %`, chg: (i) => `${i.name} 漲跌`};
+  const colLabel = {last: (i) => `${i.name}${i.unit ? '（' + i.unit + '）' : ' 數值'}`, pct: (i) => `${i.name} 漲跌 %`, chg: (i) => `${i.name} 漲跌`, ratio: (i) => `${i.name}（佔成交 %）`};
   const fields = [];
-  ins.forEach((i) => ['last', 'pct', 'chg'].forEach((c) => { if (need[i.id]?.has(c)) fields.push({id: i.id, col: c, label: colLabel[c](i)}); }));
+  ins.forEach((i) => ['last', 'ratio', 'pct', 'chg'].forEach((c) => { if (need[i.id]?.has(c)) fields.push({id: i.id, col: c, label: colLabel[c](i)}); }));
   const inputs = fields.map((f) => {
     const input = el('input', {type: 'number', step: 'any', inputmode: 'decimal'});
     input.dataset.id = f.id; input.dataset.col = f.col;
@@ -337,11 +343,12 @@
     inputs.forEach((i) => { if (i.value === '') return; (sq[i.dataset.id] ||= {})[i.dataset.col] = Number(i.value); });
     // 均線是過去的收盤平均，試算時沿用最新數值，只拿輸入的指數點位去比較
     if (model.maRules && sq[model.maRules.a]) maNs.forEach((n) => { sq[model.maRules.a]['ma' + n] = q[model.maRules.a]?.['ma' + n]; });
-    const r = Engine.computeDay(sq, model, ins);
+    const r = Engine.computeDay(sq, model, ins, yday);
     const out = $('simOut');
     out.replaceChildren(
       el('span', {class: 'muted'}, '建議持股水位'),
       el('div', {class: 'big'}, r.exposure + '%'),
+      ...(r.capped ? [el('p', {class: 'muted'}, capNote(r) + `（前一交易日 ${yday.exposure}%）`)] : []),
       el('p', {}, stanceBadge(r.tier), ' ', ...(r.tier.label !== r.tier.stance ? [el('b', {}, r.tier.label), '｜'] : []), '綜合分數 ', el('b', {class: cls(r.score)}, sgn(r.score, 1)))
     );
     const m = Math.max(...r.factors.map((f) => f.weight));
@@ -366,7 +373,7 @@
   /* ---------- 表格 ---------- */
   function drawTables() {
     const p = model.policy;
-    $('policyNote').textContent = `建議水位 = ${p.base}% + ${p.slope} × 綜合分數${model.maRules ? ' + 均線調整（' + model.maRules.rules.map((r) => `${r.n}MA 站上 +${r.above}／跌破 −${r.below}`).join('、') + '）' : ''}，限制在 ${p.floor}%–${p.cap}%。分數 = clamp(方向 × 原始值 ÷ 門檻, −1, 1) × 權重。`;
+    $('policyNote').textContent = `建議水位 = ${p.base}% + ${p.slope} × 綜合分數${model.maRules ? ' + 均線調整（' + model.maRules.rules.map((r) => `${r.n}MA 站上 +${r.above}／跌破 −${r.below}`).join('、') + '）' : ''}，限制在 ${p.floor}%–${p.cap}%${p.maxDailyChange ? `，且每天最多變動 ±${p.maxDailyChange} 個百分點` : ''}。分數 = clamp(方向 × 原始值 ÷ 門檻, −1, 1) × 權重。`;
     const defs = Object.fromEntries(model.factors.map((d) => [d.key, d]));
     const ft = $('factorTable');
     ft.append(el('tr', {}, ...['因子', '類型', '權重', '門檻', '原始值', '分數', '貢獻', '定義'].map((h, i) => el('th', {class: i >= 2 && i <= 6 ? 'n' : ''}, h))));
