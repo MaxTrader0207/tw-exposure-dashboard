@@ -1,13 +1,8 @@
 name: 每日更新水位資料
 
 on:
-  schedule:
-    # 備援用：主要由 Cloudflare Worker 準時觸發（見 cloudflare/trigger-worker.js）。
-    # 台北 16:00 與 17:00（UTC 08:00、09:00），週一到週五：收盤資料
-    - cron: "0 8 * * 1-5"
-    - cron: "0 9 * * 1-5"
-    # 台北 07:00（UTC 前一日 23:00），週一到週五早上：盤前參考
-    - cron: "0 23 * * 0-4"
+  # 排程由 Cloudflare Worker 觸發（見 cloudflare/trigger-worker.js）：
+  # 台北 07:00 盤前參考、16:00 收盤、17:00 補抓。GitHub 內建排程常延遲數小時，已停用。
   workflow_dispatch:
     inputs:
       mode:
@@ -35,7 +30,7 @@ jobs:
   update:
     runs-on: ubuntu-latest
     env:
-      MODE: ${{ inputs.mode || (github.event.schedule == '0 23 * * 0-4' && 'premarket') || 'daily' }}
+      MODE: ${{ inputs.mode || 'daily' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
