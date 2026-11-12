@@ -38,6 +38,18 @@
     }
   };
 
+  // 多日視窗：因子可設 window（交易日數）。漲跌類（pct、chg、spread、avg、rel_avg）取近 N 日加總（累計漲跌），
+  // 水準類（level、basis、breadth）取近 N 日平均；可用 agg: "sum" | "mean" 覆寫。window 為 1 或未設定時就是當天數值。
+  const SUM_TYPES = ['pct', 'chg', 'spread', 'avg', 'rel_avg'];
+  const MAX_HIST = 60;
+  function aggregate(f, values) {
+    const n = Math.max(1, Number(f.window) || 1);
+    const xs = values.slice(-n).filter((v) => v != null);
+    if (!xs.length) return null;
+    const sum = xs.reduce((a, b) => a + b, 0);
+    return (f.agg || (SUM_TYPES.includes(f.type) ? 'sum' : 'mean')) === 'sum' ? sum : sum / xs.length;
+  }
+
   function tierFor(exposure, policy) {
     const tiers = [...policy.tiers].sort((a, b) => b.min - a.min);
     const i = tiers.findIndex((t) => exposure >= t.min);
@@ -48,16 +60,21 @@
    * 計算一天的建議水位。prev 是前一個交易日的結果（computeDay 的回傳值），用於：
    *   policy.maxDailyChange：水位每天最多變動幾個百分點，避免大幅來回跳動；
    *   maRules.buffer：均線緩衝帶（%），指數在均線 ± buffer 之間時維持前一天的站上／跌破判斷。
-   * 沒有 prev 時兩者都不作用。要算一整段歷史請用 computeSeries，它會依序帶入 prev。
+   *   因子的 window：prev.hist 帶著每個因子過去幾天的當日數值，用來算多日累計或平均。
+   * 沒有 prev 時前兩者不作用、多日視窗只有當天一筆。要算一整段歷史請用 computeSeries，它會依序帶入 prev。
    */
   function computeDay(quotes, model, instruments, prev) {
+    const hist = {};
     const factors = model.factors.map((f) => {
       const fn = FACTOR_TYPES[f.type];
-      const raw = fn ? fn(f, quotes, instruments) : null;
+      const day = fn ? fn(f, quotes, instruments) : null;
+      const window = Math.max(1, Number(f.window) || 1);
+      hist[f.key] = [...(prev?.hist?.[f.key] || []), day].slice(-MAX_HIST);
+      const raw = window > 1 ? aggregate(f, hist[f.key]) : day;
       const score = raw == null ? null : clamp(Number(f.dir) * raw / Number(f.scale), -1, 1);
       return {
         key: f.key, name: f.name, desc: f.desc, type: f.type, weight: Number(f.weight),
-        raw: round(raw, 3), score: round(score, 2),
+        raw: round(raw, 3), day: round(day, 3), window, score: round(score, 2),
         contrib: score == null ? 0 : round(score * Number(f.weight), 1),
         missing: raw == null
       };
@@ -72,7 +89,7 @@
     if (lim > 0 && prev?.exposure != null) exposure = clamp(rawExposure, prev.exposure - lim, prev.exposure + lim);
     exposure = Math.round(exposure);
     const maState = Object.fromEntries(ma.filter((r) => r.above != null).map((r) => [r.n, r.above]));
-    return {factors, score, ma, maPts, maState, rawExposure: Math.round(rawExposure), exposure,
+    return {factors, hist, score, ma, maPts, maState, rawExposure: Math.round(rawExposure), exposure,
       capped: Math.round(rawExposure) !== exposure, tier: tierFor(exposure, p)};
   }
 
@@ -132,6 +149,6 @@
     return {days: days.length, matrix, beta};
   }
 
-  const api = {computeDay, computeSeries, relations, FACTOR_TYPES, members};
+  const api = {computeDay, computeSeries, relations, FACTOR_TYPES, members, aggregate, SUM_TYPES};
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Engine = api;
 })(this);

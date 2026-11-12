@@ -175,7 +175,11 @@
   function drawPremarket() {
     // 只在盤前資料比最新收盤還新時顯示（16:00 正式更新後自動隱藏）
     if (!pm || pm.date <= latest.date) return;
-    const r = Engine.computeDay(pm.quotes, model, ins, today);
+    // 多日視窗：盤前沒有更新的商品沿用昨天收盤值，不能再算成新的一天，所以把這些因子最後一筆歷史拿掉
+    const fresh = new Set(pm.updated || []);
+    const usesFresh = (f) => [f.a, f.b, ...(f.tag ? Engine.members(ins, f.tag) : [])].filter(Boolean).some((id) => fresh.has(id));
+    const hist = Object.fromEntries(model.factors.map((f) => [f.key, usesFresh(f) ? today.hist[f.key] : today.hist[f.key].slice(0, -1)]));
+    const r = Engine.computeDay(pm.quotes, model, ins, {...today, hist});
     const box = $('premarket');
     box.hidden = false;
     const d = r.exposure - today.exposure;
@@ -286,7 +290,12 @@
     }
     today.factors.forEach((f) => {
       const d = defs[f.key];
-      const text = f.missing ? (byId[d.a]?.source.type === 'macromicro' ? '財經M平方無法連線，今日影響設為 0。' : '資料不足，今日以 0 分計。') : (NARRATE[d.type] ? NARRATE[d.type](f, d) : '');
+      let text = f.missing ? '資料不足，今日以 0 分計。' : f.day == null ? '今日無新資料。' : (NARRATE[d.type] ? NARRATE[d.type]({...f, raw: f.day}, d) : '');
+      if (!f.missing && f.window > 1) {
+        const sum = (d.agg || (Engine.SUM_TYPES.includes(d.type) ? 'sum' : 'mean')) === 'sum';
+        text += ` 近 ${f.window} 個交易日${sum ? '累計' : '平均'} ${sgn(f.raw, 2)}（門檻 ±${d.scale}），水位以此計分。`;
+      }
+      if (!f.weight) text += '（回測顯示無幫助，權重為 0，僅供觀察）';
       box.append(el('div', {class: 'insight ' + (f.contrib < 0 ? 'neg' : f.contrib > 0 ? 'pos' : '')},
         el('b', {}, `${f.name}（${sgn(f.contrib, 1)} 分）：`), text));
     });
@@ -394,9 +403,9 @@
     $('policyNote').textContent = `建議水位 = ${p.base}% + ${p.slope} × 綜合分數${model.maRules ? ' + 均線調整（' + model.maRules.rules.map((r) => `${r.n}MA 站上 +${r.above}／跌破 −${r.below}`).join('、') + '）' : ''}，限制在 ${p.floor}%–${p.cap}%${p.maxDailyChange ? `，且每天最多變動 ±${p.maxDailyChange} 個百分點` : ''}。分數 = clamp(方向 × 原始值 ÷ 門檻, −1, 1) × 權重。`;
     const defs = Object.fromEntries(model.factors.map((d) => [d.key, d]));
     const ft = $('factorTable');
-    ft.append(el('tr', {}, ...['因子', '類型', '權重', '門檻', '原始值', '分數', '貢獻', '定義'].map((h, i) => el('th', {class: i >= 2 && i <= 6 ? 'n' : ''}, h))));
+    ft.append(el('tr', {}, ...['因子', '類型', '權重', '觀察天數', '門檻', '計分數值', '分數', '貢獻', '定義'].map((h, i) => el('th', {class: i >= 2 && i <= 7 ? 'n' : ''}, h))));
     today.factors.forEach((f) => ft.append(el('tr', {},
-      el('td', {}, f.name), el('td', {}, f.type), el('td', {class: 'n'}, f.weight), el('td', {class: 'n'}, defs[f.key].scale),
+      el('td', {}, f.name), el('td', {}, f.type), el('td', {class: 'n'}, f.weight), el('td', {class: 'n'}, f.window > 1 ? `${f.window} 日` : '當日'), el('td', {class: 'n'}, defs[f.key].scale),
       el('td', {class: 'n'}, f.raw ?? '—'), el('td', {class: 'n ' + cls(f.score)}, f.score == null ? '—' : sgn(f.score)),
       el('td', {class: 'n ' + cls(f.contrib)}, sgn(f.contrib, 1)), el('td', {class: 'w'}, f.desc))));
     const qt = $('quoteTable');
@@ -482,15 +491,21 @@
   const wd = await fetch('data/weights_derivation.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   if (wd && bt) {
     $('wdBox').hidden = false;
-    $('wdNote').textContent = `${wd.fixed.map((k) => model.factors.find((f) => f.key === k)?.name).join('、')}固定 15。其餘因子：把 ${wd.sample.start}～${wd.sample.end} 切成 5 段，每段都用「其他 4 段」挑出夏普值最高的權重（0、5、10、15、20，不得為負），最終權重取 5 段結果的中位數。權重 0 代表回測中這個因子沒有幫助。`;
+    const hasWin = !!wd.windows;
+    $('wdNote').textContent = `${wd.fixed.map((k) => model.factors.find((f) => f.key === k)?.name).join('、')}權重固定 15。其餘因子：把 ${wd.sample.start}～${wd.sample.end} 切成 ${wd.folds.length} 段，每段都用「其他幾段」挑出夏普值最高的權重（0、5、10、15、20，不得為負）` +
+      (hasWin ? `與觀察天數（${wd.windows.join('、')} 個交易日；漲跌類取累計、水準類取平均）。最終權重取各段中位數，觀察天數取各段最常出現者。表中每格是「權重／天數」。` : '，最終權重取各段結果的中位數。') + '權重 0 代表回測中這個因子沒有幫助。';
     const t = $('wdTable');
-    t.append(el('tr', {}, ...['因子', ...wd.folds.map((f) => `第 ${f.fold} 段`), '中位數（採用）'].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
+    t.append(el('tr', {}, ...['因子', ...wd.folds.map((f) => `第 ${f.fold} 段`), '採用權重', ...(hasWin ? ['觀察天數'] : [])].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
     wd.table.forEach((r) => t.append(el('tr', {class: r.fixed ? 'muted' : ''}, el('td', {}, r.name + (r.fixed ? '（固定）' : '')),
-      ...r.folds.map((v) => el('td', {class: 'n'}, v)), el('td', {class: 'n'}, el('b', {}, r.derived)))));
-    const cv = wd.compare[0], old = wd.compare.find((x) => x.name.startsWith('目前權重')), ma = wd.compare.find((x) => x.name.includes('只用均線'));
-    $('wdCmp').textContent = `檢驗：每段都用「沒看過該段」的權重計算（樣本外），夏普值 ${cv.sharpe}；推導前的權重 ${old.sharpe}、只用均線 ${ma.sharpe}。` +
-      (cv.sharpe > old.sharpe ? '推導後比原本主觀權重好一些，' : '推導後沒有比原本主觀權重好，') + (cv.sharpe < ma.sharpe ? '但仍不如只用均線，且差距在兩年樣本下不具統計顯著性。' : '差距在兩年樣本下不具統計顯著性。');
+      ...r.folds.map((v, i) => el('td', {class: 'n'}, hasWin && v ? `${v}／${r.foldWindows[i]}日` : v)), el('td', {class: 'n'}, el('b', {}, r.derived)),
+      ...(hasWin ? [el('td', {class: 'n'}, r.derived ? (r.window > 1 ? `${r.window} 日` : '當日') : '—')] : []))));
+    const cv = wd.compare[0], old = wd.compare.find((x) => x.name.startsWith('推導前') || x.name.startsWith('目前權重')), ma = wd.compare.find((x) => x.name.includes('只用均線'));
+    const wOnly = wd.compare.find((x) => x.name.includes('只推導權重'));
+    $('wdCmp').textContent = `檢驗：每段都用「沒看過該段」的設定計算（樣本外），夏普值 ${cv.sharpe}、年化 ${cv.cagr}%、最大回撤 ${cv.maxdd}%` +
+      (wOnly ? `；若只推導權重、全部看當日數值則是 ${wOnly.sharpe}` : '') + `；推導前的設定 ${old.sharpe}、只用均線 ${ma.sharpe}。` +
+      (cv.sharpe > ma.sharpe ? '樣本外勝過只用均線，' : '樣本外仍不如只用均線，') + '但樣本外檢驗只能降低、無法排除過度配適，實際效果仍需時間驗證。';
   }
+
   redraw(); drawPremarket(); drawMA(); drawInsights(); drawCards(); drawCorr(); fill(); runSim(); drawTables();
   let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(redraw, 150); });
 })();
