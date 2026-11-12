@@ -26,6 +26,7 @@ const cfg = read('config/instruments.json');
 const days = read('data/backtest_quotes.json');
 const ins = cfg.instruments;
 const COST = 0.001, GRID = [0, 5, 10, 15, 20], FOLDS = 6;
+const WONLY = args.includes('--windows-only');  // 權重維持現值，只推導觀察天數
 const WINS = args.includes('--no-window') ? null : [1, 3, 5, 10, 20];
 const r2 = (x, d = 2) => (x == null || !Number.isFinite(x) ? null : Math.round(x * 10 ** d) / 10 ** d);
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
@@ -97,13 +98,13 @@ const win0 = F.map(curWin);
 
 // 座標下降：逐一調整每個因子的（權重、天數），有改善才採用，直到不再變動
 function optimize(idx, wins) {
-  const w = F.map((f, k) => (isFixed[k] ? 15 : 10)), win = wins ? F.map(() => 1) : [...win0];
+  const w = WONLY ? [...w0] : F.map((f, k) => (isFixed[k] ? 15 : 10)), win = wins ? F.map(() => 1) : [...win0];
   const score = () => sharpe(pick(returns(exposures(w, win)), idx));
   let best = score();
   for (let pass = 0; pass < 8; pass++) {
     let moved = false;
     for (let k = 0; k < K; k++) {
-      for (const v of (isFixed[k] ? [15] : GRID)) {
+      for (const v of (WONLY ? [w0[k]] : isFixed[k] ? [15] : GRID)) {
         for (const W of (wins || [win[k]])) {
           if (v === w[k] && W === win[k]) continue;
           if (v === 0 && w[k] === 0) continue;  // 權重 0 時天數沒有差別
@@ -139,9 +140,9 @@ const mode = (xs, fallback) => {
 
 const cv = crossValidate(WINS);
 const full = optimize(allIdx, WINS);
-const finalW = F.map((f, k) => (isFixed[k] ? 15 : median(cv.folds.map((x) => x.weights[k]))));
+const finalW = WONLY ? [...w0] : F.map((f, k) => (isFixed[k] ? 15 : median(cv.folds.map((x) => x.weights[k]))));
 const finalWin = F.map((f, k) => (finalW[k] ? mode(cv.folds.filter((x) => x.weights[k] > 0).map((x) => x.windows[k]), full.win[k]) : 1));
-const cvW = WINS ? crossValidate(null) : null;  // 對照：只推導權重、天數全部維持現值
+const cvW = WINS && !WONLY ? crossValidate(null) : null;  // 對照：只推導權重、天數全部維持現值
 const zeros = F.map(() => 0), ones = F.map(() => 1);
 const fixedOnly = F.map((f, k) => (isFixed[k] ? 15 : 0));
 const avgExp = exposures(w0, win0).reduce((a, b) => a + b, 0) / T;
@@ -176,8 +177,8 @@ const table = F.map((f, k) => ({
   n: D[k].filter((v) => v != null).length, fullSample: full.w[k], fullWindow: full.w[k] ? full.win[k] : null,
 }));
 const out = {generatedAt: new Date().toISOString(), sample: {start: days[2].date, end: days[T - 1].date, days: nR},
-  method: `${FOLDS} 段連續區間交叉驗證，座標下降法挑使夏普值最高的權重（0/5/10/15/20，不得為負）${WINS ? `與觀察天數（${WINS.join('/')} 個交易日）` : ''}；最終權重取各段中位數${WINS ? '，觀察天數取各段最常出現者' : ''}。`,
-  fixed: fixedKeys, windows: WINS, folds: cv.folds.map(({test, ...r}) => r), table, compare: cmp, ic: icTable};
+  method: WONLY ? `權重維持原設定不動，只推導觀察天數（${WINS.join('/')} 個交易日）：${FOLDS} 段連續區間交叉驗證，座標下降法挑使夏普值最高的天數，最終取各段最常出現者。` : `${FOLDS} 段連續區間交叉驗證，座標下降法挑使夏普值最高的權重（0/5/10/15/20，不得為負）${WINS ? `與觀察天數（${WINS.join('/')} 個交易日）` : ''}；最終權重取各段中位數${WINS ? '，觀察天數取各段最常出現者' : ''}。`,
+  fixed: fixedKeys, windowsOnly: WONLY, windows: WINS, folds: cv.folds.map(({test, ...r}) => r), table, compare: cmp, ic: icTable};
 fs.writeFileSync(path.join(ROOT, 'data/weights_derivation.json'), JSON.stringify(out, null, 1));
 console.log(`樣本 ${out.sample.start} ~ ${out.sample.end}（${nR} 天）`);
 console.table(table.map(({folds, foldWindows, key, fixed, scale1: _s, ...r}) => ({...r, folds: folds.join('/'), foldWin: foldWindows.map((v) => v ?? '-').join('/')})));

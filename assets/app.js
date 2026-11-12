@@ -492,7 +492,9 @@
   if (wd && bt) {
     $('wdBox').hidden = false;
     const hasWin = !!wd.windows;
-    $('wdNote').textContent = `${wd.fixed.map((k) => model.factors.find((f) => f.key === k)?.name).join('、')}權重固定 15。其餘因子：把 ${wd.sample.start}～${wd.sample.end} 切成 ${wd.folds.length} 段，每段都用「其他幾段」挑出夏普值最高的權重（0、5、10、15、20，不得為負）` +
+    $('wdNote').textContent = wd.windowsOnly
+      ? `權重沿用先前以兩年回測推導的結果（${wd.fixed.map((k) => model.factors.find((f) => f.key === k)?.name).join('、')}固定 15），這次只推導「觀察天數」：把 ${wd.sample.start}～${wd.sample.end} 切成 ${wd.folds.length} 段，每段都用「其他幾段」挑出夏普值最高的天數（${wd.windows.join('、')} 個交易日；漲跌類取累計、水準類取平均），最終取各段最常出現者。表中每格是「權重／天數」。權重 0 的因子不計分，所以沒有天數。`
+      : `${wd.fixed.map((k) => model.factors.find((f) => f.key === k)?.name).join('、')}權重固定 15。其餘因子：把 ${wd.sample.start}～${wd.sample.end} 切成 ${wd.folds.length} 段，每段都用「其他幾段」挑出夏普值最高的權重（0、5、10、15、20，不得為負）` +
       (hasWin ? `與觀察天數（${wd.windows.join('、')} 個交易日；漲跌類取累計、水準類取平均）。最終權重取各段中位數，觀察天數取各段最常出現者。表中每格是「權重／天數」。` : '，最終權重取各段結果的中位數。') + '權重 0 代表回測中這個因子沒有幫助。';
     const t = $('wdTable');
     t.append(el('tr', {}, ...['因子', ...wd.folds.map((f) => `第 ${f.fold} 段`), '採用權重', ...(hasWin ? ['觀察天數'] : [])].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
@@ -503,7 +505,7 @@
     const wOnly = wd.compare.find((x) => x.name.includes('只推導權重'));
     $('wdCmp').textContent = `檢驗：每段都用「沒看過該段」的設定計算（樣本外），夏普值 ${cv.sharpe}、年化 ${cv.cagr}%、最大回撤 ${cv.maxdd}%` +
       (wOnly ? `；若只推導權重、全部看當日數值則是 ${wOnly.sharpe}` : '') + `；推導前的設定 ${old.sharpe}、只用均線 ${ma.sharpe}。` +
-      (cv.sharpe > ma.sharpe ? '樣本外勝過只用均線，' : '樣本外仍不如只用均線，') + '但樣本外檢驗只能降低、無法排除過度配適，實際效果仍需時間驗證。';
+      (cv.sharpe - ma.sharpe >= 0.1 ? '樣本外勝過只用均線，' : cv.sharpe > ma.sharpe ? '樣本外只略高於只用均線，差距在誤差範圍內，' : '樣本外仍不如只用均線，') + '但樣本外檢驗只能降低、無法排除過度配適，實際效果仍需時間驗證。';
   }
 
   redraw(); drawPremarket(); drawMA(); drawInsights(); drawCards(); drawCorr(); fill(); runSim(); drawTables();
