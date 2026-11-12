@@ -2,14 +2,15 @@
 每一天的數值都模擬「當天 16:00 實際能拿到的資料」，所以可以直接丟給 assets/engine.js 計算。
 
 資料來源與時點（與 scripts/fetch.py 每日抓取一致）
-- 美元指數、台幣：Yahoo 小時線在台北 14:00 取樣（Yahoo 小時線最多約兩年，這也決定回測長度）
+- 美元指數、台幣：中央銀行公布的台北 16:00 銀行間匯率（台幣直接取用；美元指數以歐元、日圓、英鎊、加幣
+  依 DXY 權重合成，佔原指數 92%）。央行尚未公布的最近幾天改用 Yahoo 小時線台北 14:00 取樣。
 - 台指期：期交所每日行情，近月一般盤
 - 加權指數：Yahoo ^TWII，均線用當天以前（含）的收盤
 - 台積電：Yahoo 還原收盤（漲跌幅不受除息影響）
 - VIX、費半、美債：前一個已收盤的美股交易日
 - 融資維持率：前一個交易日（證交所晚上才公布）
 - 外資買賣超、漲跌家數：證交所當日資料
-- 外資台指期未平倉：期交所三大法人
+- 外資台指期未平倉、散戶小台多空比：期交所三大法人（期交所只提供近三年，更早的日子這兩項留空）
 
 證交所逐日資料存在 data/cache/twse_daily.json，重跑時只抓缺的日子。
 用法：python scripts/build_backtest.py [--days 730] [--max-requests 2000]
@@ -151,33 +152,67 @@ def turnover_series(start, end):
     return out
 
 
+def cbc_fx():
+    """中央銀行每日 16:00 銀行間匯率。回傳 {日期: (台幣匯率, 合成美元指數)}，合成指數以第一天為 100。"""
+    import math
+    import requests
+    j = requests.get("https://cpx.cbc.gov.tw/API/DataAPI/Get?FileName=BP01D01", headers=fetch.UA, timeout=90).json()
+    labels = [x["data"] for x in next(iter(j["data"]["structure"].values()))]
+    print("  央行欄位：", labels[:14])
+    col = lambda token: next(i for i, v in enumerate(labels) if token in v) + 1  # noqa: E731  第 0 欄是日期
+    # (欄位, DXY 權重, 方向)：報價為「外幣/美元」時美元升值＝數字變大，「美元/外幣」則相反
+    basket = [(col("EUR"), 0.576, -1), (col("JPY"), 0.136, 1), (col("GBP"), 0.119, -1), (col("CAD"), 0.091, 1)]
+    wsum = sum(w for _, w, _ in basket)
+    twd_col = col("NTD")
+    out, prev, level = {}, None, 100.0
+    for row in j["data"]["dataSets"]:
+        ds = "".join(ch for ch in row[0] if ch.isdigit())
+        if len(ds) != 8 or ds < "2019":
+            continue
+        vals = [fetch.num(x) for x in row]
+        if vals[twd_col] is None or any(vals[c] is None for c, _, _ in basket):
+            continue
+        if prev:
+            level *= math.exp(sum(w * sgn * math.log(vals[c] / prev[c]) for c, w, sgn in basket) / wsum)
+        out[date(int(ds[:4]), int(ds[4:6]), int(ds[6:]))] = (vals[twd_col], round(level, 4))
+        prev = vals
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=725)
-    ap.add_argument("--max-requests", type=int, default=2400, help="本次最多抓幾天證交所資料（每天 3 個請求）")
+    ap.add_argument("--days", type=int, default=2190)
+    ap.add_argument("--max-requests", type=int, default=4500, help="本次最多抓幾天證交所資料（每天 3 個請求）")
     a = ap.parse_args()
     cfg = json.loads(fetch.CONFIG.read_text(encoding="utf-8"))
     today = datetime.now(fetch.TW).date()
     start = today - timedelta(days=a.days)
 
     print("== Yahoo")
-    twii_ohlc = fetch.yahoo_ohlc("^TWII", "5y")
+    twii_ohlc = fetch.yahoo_ohlc("^TWII", "10y")
     twii = {d: v["close"] for d, v in twii_ohlc.items()}
     cal = sorted(d for d in twii if start <= d < today)  # 只用已收盤的完整交易日
     closes_all = sorted(twii.items())
-    tsmc = fetch.yahoo_ohlc("2330.TW", "5y")
+    tsmc = fetch.yahoo_ohlc("2330.TW", "10y")
     tsmc_raw = {d: v["close"] for d, v in tsmc.items()}
     tsmc_adj = {d: v["adj"] for d, v in tsmc.items()}
-    us = {k: fetch.yahoo_daily(sym, "5y")[0] for k, sym in (("VIX", "^VIX"), ("SOX", "^SOX"), ("TNX", "^TNX"))}
-    asia = {k: dict(fetch.yahoo_daily(sym, "5y")[0]) for k, sym in (("N225", "^N225"), ("KS11", "^KS11"))}
+    us = {k: fetch.yahoo_daily(sym, "10y")[0] for k, sym in (("VIX", "^VIX"), ("SOX", "^SOX"), ("TNX", "^TNX"))}
+    asia = {k: dict(fetch.yahoo_daily(sym, "10y")[0]) for k, sym in (("N225", "^N225"), ("KS11", "^KS11"))}
     fx = {k: fetch.yahoo_snapshots(sym, "14:00", "2y") for k, sym in (("DXY", "DX-Y.NYB"), ("USDTWD", "TWD=X"))}
+    try:
+        cbc = cbc_fx()
+        print(f"  央行匯率 {len(cbc)} 天：{min(cbc)} ~ {max(cbc)}")
+    except Exception as e:
+        print(f"  央行匯率抓取失敗，改用 Yahoo：{e}")
+        cbc = {}
+    cbc_days = sorted(cbc)
     fetch._cache.clear()
     print(f"  交易日 {len(cal)}：{cal[0]} ~ {cal[-1]}")
 
     print("== 期交所")
     tx = tx_series(cal[0], cal[-1])
-    foi = foi_series(cal[0], cal[-1])
-    retail = mtx_retail(cal[0], cal[-1])
+    foi = foi_series(max(cal[0], today - timedelta(days=1110)), cal[-1])
+    retail = mtx_retail(max(cal[0], today - timedelta(days=1110)), cal[-1])  # 期交所三大法人資料只有近三年
     pcr = pcr_series(cal[0] - timedelta(days=45), cal[-1])
     print(f"  台指期 {len(tx)} 天、外資未平倉 {len(foi)} 天、散戶小台 {len(retail)} 天、P/C {len(pcr)} 天")
     print("== 證交所成交金額（月資料）")
@@ -215,10 +250,16 @@ def main():
     margin_days = sorted(k for k, v in cache.items() if v.get("margin2"))
     for d in cal:
         q = {}
-        for k in ("DXY", "USDTWD"):
-            v = snap(fx[k], d)
-            if v:
-                q[k] = v
+        pc = [x for x in cbc_days if x < d]
+        if d in cbc and pc:
+            (twd, dxy), (ptwd, pdxy) = cbc[d], cbc[pc[-1]]
+            q["USDTWD"] = fetch.quote(twd, twd - ptwd)
+            q["DXY"] = fetch.quote(dxy, dxy - pdxy)
+        else:
+            for k in ("DXY", "USDTWD"):
+                v = snap(fx[k], d)
+                if v:
+                    q[k] = v
         if str(d) in tx:
             q["TXF"] = tx[str(d)]
         past = [c for bd, c in closes_all if bd <= d]
