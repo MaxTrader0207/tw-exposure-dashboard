@@ -496,6 +496,7 @@
       ? `權重沿用先前以兩年回測推導的結果（${wd.fixed.map((k) => model.factors.find((f) => f.key === k)?.name).join('、')}固定 15），這次只推導「觀察天數」：把 ${wd.sample.start}～${wd.sample.end} 切成 ${wd.folds.length} 段，每段都用「其他幾段」挑出夏普值最高的天數（${wd.windows.join('、')} 個交易日；漲跌類取累計、水準類取平均），最終取各段最常出現者。表中每格是「權重／天數」。權重 0 的因子不計分，所以沒有天數。`
       : `${wd.fixed.map((k) => model.factors.find((f) => f.key === k)?.name).join('、')}權重固定 15。其餘因子：把 ${wd.sample.start}～${wd.sample.end} 切成 ${wd.folds.length} 段，每段都用「其他幾段」挑出夏普值最高的權重（0、5、10、15、20，不得為負）` +
       (hasWin ? `與觀察天數（${wd.windows.join('、')} 個交易日；漲跌類取累計、水準類取平均）。最終權重取各段中位數，觀察天數取各段最常出現者。表中每格是「權重／天數」。` : '，最終權重取各段結果的中位數。') + '權重 0 代表回測中這個因子沒有幫助。';
+    if (wd.manualNote) $('wdNote').textContent += ' ' + wd.manualNote;
     const t = $('wdTable');
     t.append(el('tr', {}, ...['因子', ...wd.folds.map((f) => `第 ${f.fold} 段`), '採用權重', ...(hasWin ? ['觀察天數'] : [])].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
     wd.table.forEach((r) => t.append(el('tr', {class: r.fixed ? 'muted' : ''}, el('td', {}, r.name + (r.fixed ? '（固定）' : '')),

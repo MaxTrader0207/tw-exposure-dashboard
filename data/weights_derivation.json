@@ -722,8 +722,8 @@
     5
    ],
    "derived": 5,
-   "window": 20,
-   "scale": 16,
+   "window": 5,
+   "scale": 27,
    "scale1": 35,
    "n": 1454,
    "fullSample": 5,
@@ -1084,5 +1084,6 @@
    "20日→20日": -0.022
   }
  ],
- "windowsOnly": true
+ "windowsOnly": true,
+ "manualNote": "P/C Ratio 變化的觀察天數原推導為 20 日，2026/11/13 依使用者指定改為 5 日平均（下方檢驗數字為改動前的推導結果）。"
 }
