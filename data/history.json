@@ -4488,7 +4488,7 @@
  {
   "date": "2026-11-23",
   "source": "證交所／期交所官方資料，匯率與美股為 Yahoo Finance（GitHub Actions 自動抓取）",
-  "fetchedAt": "2026-11-23T16:01:34+08:00",
+  "fetchedAt": "2026-11-23T17:01:39+08:00",
   "missing": [
    "N225"
   ],
