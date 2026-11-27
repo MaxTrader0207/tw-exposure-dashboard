@@ -154,7 +154,7 @@ const out = {
   factorStats,
   finiRatio: {n: fr.length, mean: r2(fm), std: r2(fsd), p5: r2([...fr].sort((a, b) => a - b)[Math.floor(fr.length * 0.05)]), p95: r2([...fr].sort((a, b) => a - b)[Math.floor(fr.length * 0.95)])},
   equity: {dates: now._dates, series: Object.fromEntries([now, raw, fixedSame, hold].map((m) => [m.name, m._curve.map((v) => r2(v, 4))])),
-    exposure: eCur.slice(2)},
+    exposure: eCur.slice(2), close: close.slice(2)},
 };
 fs.writeFileSync(path.join(ROOT, 'data/backtest.json'), JSON.stringify(out));
 console.log(`樣本 ${out.sample.start} ~ ${out.sample.end}，${out.sample.days} 天`);

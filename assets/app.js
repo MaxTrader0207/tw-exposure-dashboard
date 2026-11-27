@@ -65,6 +65,14 @@
     $('warn').hidden = false;
     $('warn').append(el('div', {}, `資料異常：${health.problems.map((p) => `${p.name} 已連續 ${p.days} 個交易日抓不到`).join('、')}，相關因子以 0 分計，可能是資料來源改版，已自動通知維護者。`));
   }
+  // 水位貼近級距門檻時提醒：差一兩個百分點就會換標籤，不代表看法大幅改變
+  const edgeNote = (e) => {
+    const ts = [...model.policy.tiers].sort((a, b) => a.min - b.min).filter((t) => t.min > 0);
+    const near = ts.map((t, i) => ({t, d: e - t.min})).filter((x) => Math.abs(x.d) <= 3 && Math.abs(x.d) > 0 || x.d === 0).sort((a, b) => Math.abs(a.d) - Math.abs(b.d))[0];
+    if (!near) return '';
+    const name = near.t.stance || near.t.label;
+    return near.d >= 0 ? `剛好在「${name}」門檻 ${near.t.min}% 之上 ${near.d} 點` : `距「${name}」門檻 ${near.t.min}% 只差 ${-near.d} 點`;
+  };
   const delta = yday ? today.exposure - yday.exposure : null;
   const stanceBadge = (t) => el('span', {class: 'stance ' + (t.tone || 'neutral')}, t.stance || t.label);
   const tile = (label, value, sub, c, hero) => el('div', {class: 'tile' + (hero ? ' hero' : '')}, el('span', {class: 'muted'}, label), el('span', {class: 'v ' + (c || '')}, value), el('span', {class: 'muted'}, sub));
@@ -72,7 +80,8 @@
     el('div', {class: 'tile hero'}, el('span', {class: 'muted'}, '建議持股水位'),
       el('span', {class: 'v hero-row'}, today.exposure + '%', stanceBadge(today.tier)),
       el('span', {class: 'muted'}, `${today.tier.label !== today.tier.stance ? today.tier.label + '｜' : ''}${yday ? `較前一日 ${delta > 0 ? '+' : ''}${delta} 個百分點${yday.tier.stance !== today.tier.stance ? `（由「${yday.tier.stance}」轉為「${today.tier.stance}」）` : ''}` : '佔可投資資金比例'}`),
-      ...(today.capped ? [el('span', {class: 'muted'}, capNote(today))] : [])),
+      ...(today.capped ? [el('span', {class: 'muted'}, capNote(today))] : []),
+      ...(edgeNote(today.exposure) ? [el('span', {class: 'muted'}, edgeNote(today.exposure))] : [])),
     tile('綜合分數', sgn(today.score, 1), '負值偏空、正值偏多', cls(today.score)),
     ...(today.ma.length ? [tile('均線調整', sgn(today.maPts, 0) + ' 點', `站上 ${today.ma.filter((r) => r.above).length}／${today.ma.length} 條均線`, cls(today.maPts))] : []),
     tile(name(bench), pct(q[bench]?.pct), fmtNum(q[bench]?.last), cls(q[bench]?.pct))
@@ -137,12 +146,36 @@
   /* ---------- 歷史 ---------- */
   const maNs = (model.maRules?.rules || []).map((r) => r.n);
   const maColors = ['#f59e0b', '#a78bfa', '#38bdf8'];
-  const series = history.map((d, i) => ({date: d.date, exposure: allRes[i].exposure, stance: allRes[i].tier.stance || allRes[i].tier.label, idx: d.quotes[bench]?.last,
+  const liveSeries = history.map((d, i) => ({date: d.date, exposure: allRes[i].exposure, stance: allRes[i].tier.stance || allRes[i].tier.label, idx: d.quotes[bench]?.last,
     ma: Object.fromEntries(maNs.map((n) => [n, d.quotes[bench]?.['ma' + n] ?? null]))}));
+  // 較長的區間用回測資料（以目前規則回算）接上每日實際資料
+  const stanceOf = (e) => { const t = [...model.policy.tiers].sort((a, b) => b.min - a.min).find((x) => e >= x.min); return t.stance || t.label; };
+  const longSeries = (() => {
+    const eq = bt?.equity;
+    if (!eq?.exposure || !eq?.close) return null;
+    const first = liveSeries[0].date;
+    const old = eq.dates.map((d, i) => ({date: d, exposure: eq.exposure[i], stance: stanceOf(eq.exposure[i]), idx: eq.close[i], ma: {}})).filter((d) => d.date < first);
+    return old.length ? [...old, ...liveSeries] : null;
+  })();
+  const RANGES = [['live', `近 ${liveSeries.length} 天`], ['250', '近 1 年'], ['all', '全部']];
+  let histRange = 'live', series = liveSeries;
+  if (longSeries) {
+    $('histRange').hidden = false;
+    RANGES.forEach(([k, label]) => {
+      const b = el('button', {type: 'button', class: k === histRange ? 'on' : ''}, label);
+      b.addEventListener('click', () => {
+        histRange = k; series = k === 'live' ? liveSeries : k === 'all' ? longSeries : longSeries.slice(-Number(k));
+        [...$('histRange').children].forEach((c) => c.classList.toggle('on', c === b));
+        drawHist();
+      });
+      $('histRange').append(b);
+    });
+  }
   function drawHist() {
     const box = $('histChart');
     box.replaceChildren();
-    $('histNote').textContent = series.length < 2 ? '目前只有一天資料，每個交易日收盤後會自動累積。' : `近 ${series.length} 個交易日：長條為建議水位（左軸），實線為${name(bench)}（右軸），虛線為 ${maNs.map((n, k) => `${n}MA（${['橘', '紫', '藍'][k % 3]}）`).join('、')}。`;
+    const long = histRange !== 'live';
+    $('histNote').textContent = series.length < 2 ? '目前只有一天資料，每個交易日收盤後會自動累積。' : long ? `${series[0].date} ～ ${series[series.length - 1].date}（${series.length} 個交易日）：長條為建議水位（左軸），實線為${name(bench)}（右軸）。${track?.since || liveSeries[0].date} 以前是用目前規則回算的結果，不是當時實際公布的數字。` : `近 ${series.length} 個交易日：長條為建議水位（左軸），實線為${name(bench)}（右軸），虛線為 ${maNs.map((n, k) => `${n}MA（${['橘', '紫', '藍'][k % 3]}）`).join('、')}。`;
     const W = Math.max(300, box.clientWidth || 600), H = 240, L = 40, R = 64, T = 12, B = 28;
     const svg = sv('svg', {viewBox: `0 0 ${W} ${H}`});
     box.append(svg);
@@ -153,27 +186,27 @@
       svg.append(sv('text', {x: L - 6, y: y1(v), dy: '0.35em', 'text-anchor': 'end', fill: 'var(--muted)'}, v + '%'));
     });
     series.forEach((d, i) => {
-      const w = Math.min(28, bw * 0.7), x = L + i * bw + (bw - w) / 2;
-      const r = sv('rect', {x, y: y1(d.exposure), width: w, height: y1(0) - y1(d.exposure), rx: 2, fill: 'var(--accent)', opacity: 0.55});
+      const w = bw < 4 ? bw + 0.3 : Math.min(28, bw * 0.7), x = L + i * bw + (bw - w) / 2;
+      const r = sv('rect', {x, y: y1(d.exposure), width: w, height: y1(0) - y1(d.exposure), rx: bw < 4 ? 0 : 2, fill: 'var(--accent)', opacity: 0.55});
       r.append(sv('title', {}, `${d.date}　水位 ${d.exposure}%（${d.stance}）　${name(bench)} ${fmtNum(d.idx)}`));
       svg.append(r);
     });
     const idx = series.filter((d) => d.idx != null);
     if (idx.length) {
-      const vals = idx.flatMap((d) => [d.idx, ...maNs.map((n) => d.ma[n]).filter((v) => v != null)]);
+      const vals = idx.flatMap((d) => [d.idx, ...(long ? [] : maNs.map((n) => d.ma[n]).filter((v) => v != null))]);
       const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.1 || hi * 0.01;
       const y2 = (v) => T + (1 - (v - lo + pad) / (hi - lo + 2 * pad)) * (H - T - B);
       const pts = series.map((d, i) => (d.idx == null ? null : [L + i * bw + bw / 2, y2(d.idx)])).filter(Boolean);
-      maNs.forEach((n, k) => {
+      if (!long) maNs.forEach((n, k) => {
         const mp = series.map((d, i) => (d.ma[n] == null ? null : `${L + i * bw + bw / 2},${y2(d.ma[n])}`)).filter(Boolean);
         if (mp.length > 1) svg.append(sv('polyline', {points: mp.join(' '), fill: 'none', stroke: maColors[k % 3], 'stroke-width': 1.5, 'stroke-dasharray': '5 3'}));
       });
-      if (pts.length > 1) svg.append(sv('polyline', {points: pts.map((p) => p.join(',')).join(' '), fill: 'none', stroke: 'var(--fg)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}));
-      pts.forEach((p) => svg.append(sv('circle', {cx: p[0], cy: p[1], r: 3, fill: 'var(--fg)'})));
+      if (pts.length > 1) svg.append(sv('polyline', {points: pts.map((p) => p.join(',')).join(' '), fill: 'none', stroke: 'var(--fg)', 'stroke-width': n > 120 ? 1.3 : 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}));
+      if (n <= 80) pts.forEach((p) => svg.append(sv('circle', {cx: p[0], cy: p[1], r: 3, fill: 'var(--fg)'})));
       [lo, hi].forEach((v) => svg.append(sv('text', {x: W - R + 6, y: y2(v), dy: '0.35em', fill: 'var(--muted)'}, Math.round(v).toLocaleString())));
     }
     const step = Math.ceil(n / Math.max(1, Math.floor((W - L - R) / 70)));
-    series.forEach((d, i) => { if (i % step === 0 || i === n - 1) svg.append(sv('text', {x: L + i * bw + bw / 2, y: H - 8, 'text-anchor': 'middle', fill: 'var(--muted)'}, d.date.slice(5))); });
+    series.forEach((d, i) => { if (i % step === 0 || i === n - 1) svg.append(sv('text', {x: L + i * bw + bw / 2, y: H - 8, 'text-anchor': 'middle', fill: 'var(--muted)'}, n > 120 ? d.date.slice(2, 7) : d.date.slice(5))); });
   }
 
   /* ---------- 盤前參考 ---------- */
@@ -199,7 +232,7 @@
       el('div', {class: 'pm-head'},
         el('div', {}, el('span', {class: 'muted'}, `盤前參考水位｜${pm.date} ${t} 更新`),
           el('div', {class: 'pm-val'}, r.exposure + '%', stanceBadge(r.tier),
-            el('span', {class: 'muted pm-delta'}, `較 ${latest.date} 收盤 ${d > 0 ? '+' : ''}${d} 個百分點`))),
+            el('span', {class: 'muted pm-delta'}, `較 ${latest.date} 收盤 ${d > 0 ? '+' : ''}${d} 個百分點${edgeNote(r.exposure) ? '｜' + edgeNote(r.exposure) : ''}`))),
         el('p', {class: 'muted pm-note'}, `台股收盤資料沿用 ${pm.basedOn}，只換上開盤前已知的資料；今天 16:00 後更新為正式水位。`)),
       el('div', {class: 'pm-items'}, ...items),
       moved.length ? el('p', {class: 'muted'}, '主要變動：' + moved.slice(0, 4).map((x) => `${x.f.name} ${sgn(x.dv, 1)} 分`).join('、')) : el('p', {class: 'muted'}, '與昨日收盤相比，各因子沒有明顯變化。'));

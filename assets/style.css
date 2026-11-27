@@ -90,3 +90,6 @@ details.fold.sub>summary{font-size:14px;color:var(--muted);padding:10px 0}
 details.fold .card{background:var(--bg)}
 .tile .v2{font-size:15px;font-weight:500;line-height:1.5}
 @media (min-width:900px){.tiles{grid-template-columns:repeat(6,1fr)}}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:inherit;font-size:13px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px 14px;cursor:pointer}
+.seg button.on{color:var(--fg);border-color:var(--accent)}
