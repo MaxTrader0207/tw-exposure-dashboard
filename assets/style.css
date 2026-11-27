@@ -77,3 +77,16 @@ tr.hl td{background:color-mix(in srgb,var(--accent) 10%,transparent);font-weight
 .heat td .muted{font-size:11px}
 .legend-row{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:6px}
 .legend-row i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+details.fold{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 18px}
+details.fold>summary{cursor:pointer;padding:14px 0;font-size:16px;font-weight:500;list-style:none;display:flex;align-items:center;gap:8px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:"＋";color:var(--muted);font-family:"JetBrains Mono",monospace;width:1em}
+details.fold[open]>summary::before{content:"－"}
+details.fold[open]{padding-bottom:18px;display:flex;flex-direction:column;gap:10px}
+details.fold[open]>*+*{margin-top:10px}
+details.fold.sub{background:transparent;padding:0 14px;margin-top:8px}
+details.fold.sub>summary{font-size:14px;color:var(--muted);padding:10px 0}
+details.fold .card{background:var(--bg)}
+.tile .v2{font-size:15px;font-weight:500;line-height:1.5}
+@media (min-width:900px){.tiles{grid-template-columns:repeat(6,1fr)}}

@@ -34,6 +34,8 @@
     return;
   }
   const bt = await fetch('data/backtest.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const oos = await fetch('data/backtest_oos.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const track = await fetch('data/track.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const health = await fetch('data/health.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const pm = await fetch('data/premarket.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const ins = cfg.instruments;
@@ -78,7 +80,8 @@
   const sorted = [...today.factors].filter((f) => !f.missing).sort((a, b) => a.contrib - b.contrib);
   if (sorted.length) {
     const w = sorted[0], s = sorted[sorted.length - 1];
-    $('tiles').append(tile('最大扣分', w.name, sgn(w.contrib, 1) + ' 分', 'down'), tile('最大加分', s.name, sgn(s.contrib, 1) + ' 分', s.contrib > 0 ? 'up' : ''));
+    $('tiles').append(el('div', {class: 'tile'}, el('span', {class: 'muted'}, '最大扣分／加分'),
+      el('span', {class: 'v2 down'}, `${w.name} ${sgn(w.contrib, 1)}`), el('span', {class: 'v2 ' + (s.contrib > 0 ? 'up' : '')}, `${s.name} ${sgn(s.contrib, 1)}`)));
   }
   $('tier').append(el('b', {}, today.tier.label + '：'), today.tier.advice);
 
@@ -119,7 +122,9 @@
 
   function drawFactor() {
     const m = Math.max(...today.factors.map((f) => f.weight));
-    hbar($('factorChart'), today.factors.map((f) => ({label: f.name, value: f.contrib, tip: f.missing ? '資料不足，以 0 分計' : f.desc})), {domain: [-m, m], fmt: (v) => sgn(v, 1)});
+    const zero = today.factors.filter((f) => !f.weight);
+    $('factorNote').textContent = zero.length ? `另有 ${zero.length} 個權重 0 的觀察因子（${zero.map((f) => f.name).join('、')}）不計分，未列在圖上。` : '';
+    hbar($('factorChart'), today.factors.filter((f) => f.weight).map((f) => ({label: f.name, value: f.contrib, tip: f.missing ? '資料不足，以 0 分計' : f.desc})), {domain: [-m, m], fmt: (v) => sgn(v, 1)});
   }
   function drawRel() {
     const items = ins.filter((i) => i.id !== bench && !(i.tags || []).some((t) => t === 'fx' || t === 'macro') && q[i.id]?.pct != null)
@@ -288,6 +293,8 @@
         el('b', {}, `均線位置（水位 ${sgn(today.maPts, 0)} 點）：`),
         `${up.length ? '站上 ' + up.map((r) => r.n + 'MA').join('、') : ''}${up.length && dn.length ? '；' : ''}${dn.length ? '跌破 ' + dn.map((r) => `${r.n}MA（${pct(r.gap)}）`).join('、') : ''}。${up.length === today.ma.length ? '多頭排列，趨勢支撐完整。' : dn.length === today.ma.length ? '三條均線全數跌破，中長期趨勢轉弱。' : '均線之間，趨勢分歧。'}`));
     }
+    const zeroN = today.factors.filter((f) => !f.weight).length;
+    if (zeroN) { $('watchBox').hidden = false; $('watchSum').textContent = `僅供觀察的因子（${zeroN} 個；回測顯示沒有幫助，權重 0、不計分）`; }
     today.factors.forEach((f) => {
       const d = defs[f.key];
       let text = f.missing ? '資料不足，今日以 0 分計。' : f.day == null ? '今日無新資料。' : (NARRATE[d.type] ? NARRATE[d.type]({...f, raw: f.day}, d) : '');
@@ -295,8 +302,7 @@
         const sum = (d.agg || (Engine.SUM_TYPES.includes(d.type) ? 'sum' : 'mean')) === 'sum';
         text += ` 近 ${f.window} 個交易日${sum ? '累計' : '平均'} ${sgn(f.raw, 2)}（門檻 ±${d.scale}），水位以此計分。`;
       }
-      if (!f.weight) text += '（回測顯示無幫助，權重為 0，僅供觀察）';
-      box.append(el('div', {class: 'insight ' + (f.contrib < 0 ? 'neg' : f.contrib > 0 ? 'pos' : '')},
+      (f.weight ? box : $('watchInsights')).append(el('div', {class: 'insight ' + (f.contrib < 0 ? 'neg' : f.contrib > 0 ? 'pos' : '')},
         el('b', {}, `${f.name}（${sgn(f.contrib, 1)} 分）：`), text));
     });
   }
@@ -424,16 +430,24 @@
     const [cur] = bt.strategies;
     const same = bt.strategies.find((x) => x.name.startsWith('固定') && x.name.includes('平均水位'));
     const better = cur.sharpe > same.sharpe;
-    $('btLede').textContent = `${bt.sample.start} ～ ${bt.sample.end}（${bt.sample.days} 個交易日）照目前規則操作：年化報酬 ${cur.cagr}%、最大回撤 ${cur.maxdd}%、夏普值 ${cur.sharpe}。` +
-      `「固定 ${Math.round(same.avgExp)}% 不調整」（平均水位相同）的夏普值 ${same.sharpe}、最大回撤 ${same.maxdd}%，目前規則${better ? '略好' : '沒有比較好'}。`;
     const fo = bt.strategies.find((x) => x.name.startsWith('只用因子'));
     const mo = bt.strategies.find((x) => x.name.startsWith('只用均線'));
-    if (fo && mo) $('btLede').textContent += `拆開來看，「只用均線規則」夏普值 ${mo.sharpe}、「只用因子」${fo.sharpe}，` +
-      (fo.sharpe < same.sharpe ? '加分主要來自均線規則，每日因子本身沒有勝過固定持股。' : '均線與因子都有貢獻。');
-    $('btNote').textContent = bt.assumptions + ` 樣本只有約兩年，結果僅供參考，不保證未來。`;
+    const span = `${bt.sample.start} ～ ${bt.sample.end}（${bt.sample.days} 個交易日，約 ${Math.round(bt.sample.days / 252)} 年）`;
+    let lede;
+    if (oos) {
+      const d = oos.oos.sharpe - mo.sharpe;
+      lede = `${span}。用「沒看過的資料」檢驗（切成 ${oos.folds} 段，每段的觀察天數都只用其他幾段挑選）：夏普值 ${oos.oos.sharpe}、年化報酬 ${oos.oos.cagr}%、最大回撤 ${oos.oos.maxdd}%。` +
+        `對照：只用均線規則 ${mo.sharpe}、固定 ${Math.round(same.avgExp)}% 不調整 ${same.sharpe}（最大回撤 ${same.maxdd}%）。` +
+        (d >= 0.1 ? '目前規則勝過只用均線。' : d > 0 ? '目前規則只比「只用均線」略高，差距在誤差範圍內；比固定持股好的部分主要來自均線規則。' : '目前規則沒有勝過只用均線。') +
+        `下表第一列的 ${cur.sharpe} 是樣本內數字（觀察天數就是用這段資料挑的），會偏樂觀，請以 ${oos.oos.sharpe} 為準。`;
+    } else {
+      lede = `${span}照目前規則操作：年化報酬 ${cur.cagr}%、最大回撤 ${cur.maxdd}%、夏普值 ${cur.sharpe}（樣本內，偏樂觀）。「固定 ${Math.round(same.avgExp)}% 不調整」夏普值 ${same.sharpe}、最大回撤 ${same.maxdd}%，目前規則${better ? '略好' : '沒有比較好'}。`;
+    }
+    $('btLede').textContent = lede;
+    $('btNote').textContent = bt.assumptions + ` 回測約每月自動重跑一次（上次 ${bt.generatedAt.slice(0, 10)}）。「外資期貨空單增減」「散戶小台多空比」只有近三年資料。權重另以近兩年資料推導，所以連樣本外數字也可能略為偏高；結果僅供參考，不保證未來。`;
     const t = $('btTable');
     t.append(el('tr', {}, ...['策略', '年化報酬', '年化波動', '夏普值', '最大回撤', '平均水位', '每日平均調整', '單日變動 ≥15 點'].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
-    bt.strategies.forEach((x, k) => t.append(el('tr', {class: k === 0 ? 'hl' : ''}, el('td', {}, x.name),
+    bt.strategies.forEach((x, k) => t.append(el('tr', {class: k === 0 ? 'hl' : ''}, el('td', {}, x.name + (k === 0 ? ' ※ 樣本內' : '')),
       el('td', {class: 'n ' + cls(x.cagr)}, x.cagr + '%'), el('td', {class: 'n'}, x.vol + '%'), el('td', {class: 'n'}, x.sharpe),
       el('td', {class: 'n down'}, x.maxdd + '%'), el('td', {class: 'n'}, x.avgExp + '%'), el('td', {class: 'n'}, x.avgMove + ' 點'), el('td', {class: 'n'}, x.bigMoves + ' 次'))));
     const caps = [...new Set(bt.grid.map((g) => g.cap))], bufs = [...new Set(bt.grid.map((g) => g.buffer))];
@@ -458,16 +472,13 @@
         el('td', {class: 'n ' + cls(ic?.ic5)}, ic?.ic5 == null ? '—' : sgn(ic.ic5, 3)), el('td', {class: 'n'}, ic?.t == null ? '—' : ic.t.toFixed(2))));
     });
   }
-  function drawBacktestChart() {
-    if (!bt) return;
-    const box = $('btChart');
+  function lineChart(box, dates, S, fmtX = (d) => d.slice(2, 7), digits = 2) {
     box.replaceChildren();
-    const {dates, series: S} = bt.equity;
     const names = Object.keys(S);
     const colors = ['var(--accent)', '#a78bfa', 'var(--ref)', '#f59e0b'];
     const W = Math.max(300, box.clientWidth || 600), H = 260, L = 44, R = 12, T = 12, B = 28;
     const all = names.flatMap((n) => S[n]);
-    const lo = Math.min(...all), hi = Math.max(...all), pad = (hi - lo) * 0.08 || 0.02;
+    const lo = Math.min(...all, 1), hi = Math.max(...all, 1), pad = (hi - lo) * 0.08 || 0.02;
     const x = (i) => L + i / Math.max(1, dates.length - 1) * (W - L - R);
     const y = (v) => T + (1 - (v - lo + pad) / (hi - lo + 2 * pad)) * (H - T - B);
     const svg = sv('svg', {viewBox: `0 0 ${W} ${H}`});
@@ -475,18 +486,61 @@
     for (let k = 0; k <= 4; k++) {
       const v = lo - pad + (hi - lo + 2 * pad) * k / 4;
       svg.append(sv('line', {x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--grid)'}));
-      svg.append(sv('text', {x: L - 6, y: y(v), dy: '0.35em', 'text-anchor': 'end', fill: 'var(--muted)'}, v.toFixed(2)));
+      svg.append(sv('text', {x: L - 6, y: y(v), dy: '0.35em', 'text-anchor': 'end', fill: 'var(--muted)'}, v.toFixed(digits)));
     }
     svg.append(sv('line', {x1: L, x2: W - R, y1: y(1), y2: y(1), stroke: 'var(--ref)', 'stroke-dasharray': '4 3'}));
     names.forEach((n, k) => svg.append(sv('polyline', {points: S[n].map((v, i) => `${x(i)},${y(v)}`).join(' '), fill: 'none', stroke: colors[k % colors.length], 'stroke-width': k === 0 ? 2.5 : 1.5, 'stroke-linejoin': 'round', opacity: k === 0 ? 1 : 0.85})));
     const step = Math.ceil(dates.length / Math.max(1, Math.floor((W - L - R) / 80)));
-    dates.forEach((d, i) => { if (i % step === 0) svg.append(sv('text', {x: x(i), y: H - 8, 'text-anchor': 'middle', fill: 'var(--muted)'}, d.slice(2, 7))); });
+    dates.forEach((d, i) => { if ((i % step === 0 && dates.length - 1 - i >= step * 0.6) || i === dates.length - 1) svg.append(sv('text', {x: x(i), y: H - 8, 'text-anchor': i === dates.length - 1 ? 'end' : 'middle', fill: 'var(--muted)'}, fmtX(d))); });
     const legend = el('div', {class: 'legend-row'});
     names.forEach((n, k) => legend.append(el('span', {}, el('i', {style: `background:${colors[k % colors.length]}`}), `${n} ${S[n][S[n].length - 1].toFixed(3)}`)));
     box.append(legend);
   }
+  function drawBacktestChart() {
+    if (!bt) return;
+    lineChart($('btChart'), bt.equity.dates, bt.equity.series);
+  }
 
-  const redraw = () => { drawFactor(); drawRel(); drawHist(); drawBacktestChart(); };
+  /* ---------- 上線以來的實績 ---------- */
+  // 與回測相同的假設：16:00 公布水位、隔天開盤才調整（夜間跳空沿用前一天水位）；沒有開盤價的日子以收盤對收盤計算。
+  const COST = 0.001;
+  const trackStats = (() => {
+    const rows = track?.rows || [];
+    if (rows.length < 3) return null;
+    const fixed = Math.round(bt?.strategies.find((x) => x.name.startsWith('固定') && x.name.includes('平均水位'))?.avgExp ?? 66);
+    const mk = (expo) => {
+      let eq = 1, pk = 1, dd = 0, turn = 0; const curve = [1];
+      for (let t = 0; t + 1 < rows.length; t++) {
+        const eNow = expo(t) / 100, ePrev = (t ? expo(t - 1) : expo(t)) / 100, c0 = rows[t].close, c1 = rows[t + 1].close, o1 = rows[t + 1].open;
+        const r = (o1 ? ePrev * (o1 / c0 - 1) + eNow * (c1 / o1 - 1) : eNow * (c1 / c0 - 1)) - Math.abs(eNow - ePrev) * COST;
+        eq *= 1 + r; pk = Math.max(pk, eq); dd = Math.min(dd, eq / pk - 1); turn += Math.abs(eNow - ePrev); curve.push(eq);
+      }
+      return {ret: (eq - 1) * 100, dd: dd * 100, curve, avg: rows.slice(0, -1).reduce((a, _, t) => a + expo(t), 0) / (rows.length - 1)};
+    };
+    return {rows, fixed, model: mk((t) => rows[t].exposure), fix: mk(() => fixed), hold: mk(() => 100)};
+  })();
+  function drawTrackTable() {
+    if (!trackStats) return;
+    const {rows, fixed, model: m, fix, hold} = trackStats;
+    $('trackSection').hidden = false;
+    const n = rows.length - 1, idx = (rows[n].close / rows[0].close - 1) * 100;
+    $('trackLede').textContent = `${rows[0].date} ～ ${rows[n].date}（${n} 個交易日）加權指數 ${pct(idx)}。每天照網頁公布的水位操作：${pct(m.ret)}、最大回撤 ${m.dd.toFixed(2)}%；買進持有 100%：${pct(hold.ret)}、最大回撤 ${hold.dd.toFixed(2)}%。` +
+      (n < 60 ? `目前只有 ${n} 天，等於一段行情，還不足以判斷規則是否有效。` : '');
+    const t = $('trackTable');
+    t.append(el('tr', {}, ...['做法', '累積報酬', '最大回撤', '平均水位'].map((h, i) => el('th', {class: i ? 'n' : ''}, h))));
+    [['照公布的水位操作', m], [`固定 ${fixed}%`, fix], ['買進持有 100%', hold]].forEach(([nm, x], k) => t.append(el('tr', {class: k === 0 ? 'hl' : ''}, el('td', {}, nm),
+      el('td', {class: 'n ' + cls(x.ret)}, pct(x.ret)), el('td', {class: 'n down'}, x.dd.toFixed(2) + '%'), el('td', {class: 'n'}, x.avg.toFixed(0) + '%'))));
+    $('trackNote').textContent = `從 ${track.since} 起（目前這套規則定案的第一天）每天記錄當天公布的水位，寫入後不再回頭修改，之後即使調整規則，過去的紀錄也不會變。計算方式與回測相同：16:00 公布、隔天開盤調整，交易成本每調整 100 個百分點扣 0.1%；` +
+      (rows.some((r, i) => i && !r.open) ? '部分日期沒有開盤價，改以收盤對收盤計算；' : '') + '標的為加權指數，不含股利。';
+  }
+  function drawTrackChart() {
+    if (!trackStats) return;
+    const {rows, fixed, model: m, fix, hold} = trackStats;
+    lineChart($('trackChart'), rows.map((r) => r.date), {'照公布的水位操作': m.curve, [`固定 ${fixed}%`]: fix.curve, '買進持有 100%': hold.curve}, (d) => d.slice(5), 3);
+  }
+
+  const redraw = () => { drawFactor(); drawRel(); drawHist(); drawBacktestChart(); drawTrackChart(); };
+  drawTrackTable();
   drawBacktestTables();
   const wd = await fetch('data/weights_derivation.json' + bust).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   if (wd && bt) {

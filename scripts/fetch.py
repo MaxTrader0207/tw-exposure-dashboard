@@ -481,6 +481,12 @@ def add_moving_averages(ins, d, q):
     for n in ins["ma"]:
         if len(closes) >= n:
             q[f"ma{n}"] = round(sum(closes[-n:]) / n, 2)
+    try:  # 開盤價：實績追蹤用（16:00 決定的水位隔天開盤才調整）
+        o = yahoo_ohlc(ins["historySymbol"], "1mo").get(d, {}).get("open")
+        if o:
+            q["open"] = round(o, 2)
+    except Exception as e:
+        print(f"  {ins['id']} 開盤價：{e}")
 
 
 ADAPTERS = {

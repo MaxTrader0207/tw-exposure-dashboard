@@ -1,0 +1,66 @@
+{
+ "since": "2026-11-13",
+ "rows": [
+  {
+   "date": "2026-11-13",
+   "exposure": 23,
+   "close": 43675.12,
+   "open": null
+  },
+  {
+   "date": "2026-11-16",
+   "exposure": 23,
+   "close": 41040.08,
+   "open": null
+  },
+  {
+   "date": "2026-11-17",
+   "exposure": 20,
+   "close": 40092.11,
+   "open": null
+  },
+  {
+   "date": "2026-11-18",
+   "exposure": 23,
+   "close": 40194.91,
+   "open": null
+  },
+  {
+   "date": "2026-11-19",
+   "exposure": 22,
+   "close": 38426.89,
+   "open": null
+  },
+  {
+   "date": "2026-11-20",
+   "exposure": 19,
+   "close": 36033.29,
+   "open": null
+  },
+  {
+   "date": "2026-11-23",
+   "exposure": 20,
+   "close": 36811.89,
+   "open": null
+  },
+  {
+   "date": "2026-11-24",
+   "exposure": 27,
+   "close": 40122.35,
+   "open": null
+  },
+  {
+   "date": "2026-11-25",
+   "exposure": 18,
+   "close": 38195.43,
+   "open": null
+  },
+  {
+   "date": "2026-11-26",
+   "exposure": 19,
+   "close": 39151.81,
+   "open": null
+  }
+ ],
+ "updatedAt": "2026-11-27T02:26:35.699Z"
+}

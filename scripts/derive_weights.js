@@ -159,6 +159,16 @@ const cmp = [
   ['買進持有 100%', returns(new Array(T).fill(100))],
 ].map(([name, rs]) => ({name, ...perf(rs), byFold: blocks.map(([a, b]) => r2(sharpe(rs.slice(a, b))))}));
 
+// --eval：只估計樣本外績效給網頁回測區塊用，不改設定、不改推導紀錄
+if (args.includes('--eval')) {
+  const o = {generatedAt: new Date().toISOString(), sample: {start: days[2].date, end: days[T - 1].date, days: nR}, folds: FOLDS,
+    oos: cmp[0], inSample: perf(returns(exposures(w0, win0))), maOnly: cmp.find((x) => x.name.includes('只用均線')),
+    byFold: cv.folds.map(({from, to, testSharpe}) => ({from, to, sharpe: testSharpe}))};
+  fs.writeFileSync(path.join(ROOT, 'data/backtest_oos.json'), JSON.stringify(o, null, 1));
+  console.log('樣本外', o.oos.sharpe, o.oos.cagr, o.oos.maxdd, '｜樣本內', o.inSample.sharpe, '｜只用均線', o.maOnly.sharpe);
+  process.exit(0);
+}
+
 // 各因子在不同觀察天數下，與未來 5 日、20 日報酬的等級相關（僅供參考）
 const rank = (xs) => { const s = xs.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]); const r = []; s.forEach(([, i], j) => { r[i] = j; }); return r; };
 const corr = (a, b) => { const n = a.length, ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n; let sab = 0, saa = 0, sbb = 0; for (let i = 0; i < n; i++) { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; } return saa && sbb ? sab / Math.sqrt(saa * sbb) : null; };

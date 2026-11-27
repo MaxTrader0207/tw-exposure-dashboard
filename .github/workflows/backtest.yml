@@ -32,12 +32,14 @@ jobs:
         run: python scripts/build_backtest.py --days "${{ inputs.days || '2190' }}"
       - name: 回測
         run: node scripts/backtest.js
+      - name: 樣本外績效估計（交叉驗證，不改設定）
+        run: node scripts/derive_weights.js --windows-only --eval
       - name: 提交結果（失敗時也保存已抓到的快取）
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/cache data/backtest_quotes.json data/backtest.json 2>/dev/null || true
+          git add data/cache data/backtest_quotes.json data/backtest.json data/backtest_oos.json 2>/dev/null || true
           git diff --cached --quiet && echo "無變更" && exit 0
           git commit -m "backtest: $(TZ=Asia/Taipei date +%F) 回測資料與結果"
           git pull --rebase -q origin main

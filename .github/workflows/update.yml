@@ -21,6 +21,7 @@ on:
 permissions:
   contents: write
   issues: write
+  actions: write
 
 concurrency:
   group: update-data
@@ -66,6 +67,10 @@ jobs:
           elif [ -n "$open" ]; then
             gh issue close "$open" --comment "$(TZ=Asia/Taipei date +%F) 所有商品資料已恢復正常。"
           fi
+      - name: 記錄今天公布的水位（實績追蹤）
+        if: env.MODE != 'premarket'
+        continue-on-error: true
+        run: node scripts/track.js
       - name: 提交資料
         run: |
           git config user.name "github-actions[bot]"
@@ -75,3 +80,13 @@ jobs:
           git commit -m "data: $(TZ=Asia/Taipei date +%F) $([ "$MODE" = premarket ] && echo 盤前參考 || echo 收盤資料)"
           git pull --rebase -q origin main
           git push
+      - name: 每月自動重跑回測（距上次超過 28 天；不使用 GitHub 排程）
+        if: env.MODE != 'premarket'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          age=$(python3 -c "import json,datetime as d;g=json.load(open('data/backtest.json'))['generatedAt'];print((d.datetime.now(d.timezone.utc)-d.datetime.fromisoformat(g.replace('Z','+00:00'))).days)")
+          busy=$(gh run list --workflow backtest.yml --limit 5 --json status --jq '[.[]|select(.status!="completed")]|length')
+          echo "距上次回測 $age 天，執行中 $busy"
+          if [ "$age" -ge 28 ] && [ "$busy" = "0" ]; then gh workflow run backtest.yml --ref main; fi
