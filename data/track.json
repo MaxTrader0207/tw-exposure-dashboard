@@ -5,62 +5,62 @@
    "date": "2026-11-13",
    "exposure": 23,
    "close": 43675.12,
-   "open": null
+   "open": 43719.75
   },
   {
    "date": "2026-11-16",
    "exposure": 23,
    "close": 41040.08,
-   "open": null
+   "open": 43512.42
   },
   {
    "date": "2026-11-17",
    "exposure": 20,
    "close": 40092.11,
-   "open": null
+   "open": 40546.64
   },
   {
    "date": "2026-11-18",
    "exposure": 23,
    "close": 40194.91,
-   "open": null
+   "open": 40720.09
   },
   {
    "date": "2026-11-19",
    "exposure": 22,
    "close": 38426.89,
-   "open": null
+   "open": 40145.73
   },
   {
    "date": "2026-11-20",
    "exposure": 19,
    "close": 36033.29,
-   "open": null
+   "open": 37646.13
   },
   {
    "date": "2026-11-23",
    "exposure": 20,
    "close": 36811.89,
-   "open": null
+   "open": 35899.48
   },
   {
    "date": "2026-11-24",
    "exposure": 27,
    "close": 40122.35,
-   "open": null
+   "open": 39148.91
   },
   {
    "date": "2026-11-25",
    "exposure": 18,
    "close": 38195.43,
-   "open": null
+   "open": 39983.91
   },
   {
    "date": "2026-11-26",
    "exposure": 19,
    "close": 39151.81,
-   "open": null
+   "open": 38435.99
   }
  ],
- "updatedAt": "2026-11-27T02:26:35.699Z"
+ "updatedAt": "2026-11-27T03:00:06.436Z"
 }
