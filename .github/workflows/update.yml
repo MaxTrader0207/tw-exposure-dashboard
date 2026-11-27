@@ -71,16 +71,6 @@ jobs:
         if: env.MODE != 'premarket'
         continue-on-error: true
         run: node scripts/track.js
-      - name: 水位變動推播（有設定 Telegram 或 LINE 的密鑰才會送出）
-        if: env.MODE != 'premarket'
-        continue-on-error: true
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
-          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
-          NOTIFY_MIN_CHANGE: ${{ vars.NOTIFY_MIN_CHANGE }}
-        run: node scripts/notify.js
       - name: 提交資料
         run: |
           git config user.name "github-actions[bot]"
